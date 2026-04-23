@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CryptoFusion | Blockchain</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Segoe UI",Inter,system-ui;
+  color:white;
+  padding-top:80px;
+  background:
+    linear-gradient(rgba(255,255,255,0.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.06) 1px,transparent 1px),
+    #0a1f44;
+  background-size:42px 42px;
+  animation:gridMove 20s linear infinite;
+}
+@keyframes gridMove{from{background-position:0 0,0 0}to{background-position:80px 80px,80px 80px}}
+.page{max-width:1200px;margin:auto;padding:40px 6%}
+h1{font-size:36px;font-weight:900;color:#facc15;margin-bottom:8px}
+.subtitle{color:#94a3b8;margin-bottom:32px;font-size:14px}
+
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:36px}
+.stat{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:20px;text-align:center}
+.stat .lbl{font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
+.stat .val{font-size:28px;font-weight:900;color:#facc15;margin-top:8px}
+.stat .val.green{color:#22c55e}
+.stat .val.red{color:#ef4444}
+
+.msg{padding:14px 20px;border-radius:12px;margin-bottom:24px;font-weight:700;
+  background:rgba(250,204,21,.12);border:1px solid rgba(250,204,21,.35);color:#fde68a}
+
+.mine-btn{
+  display:inline-block;margin-bottom:28px;
+  padding:13px 32px;border-radius:999px;border:none;
+  background:#facc15;color:#0a1f44;font-weight:900;font-size:15px;
+  cursor:pointer;text-decoration:none;transition:.3s;
+}
+.mine-btn:hover{transform:translateY(-2px);box-shadow:0 0 22px rgba(250,204,21,.45)}
+
+.chain{display:flex;flex-direction:column;gap:16px}
+.block-card{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;padding:22px 26px;
+  position:relative;
+}
+.block-card.genesis{border-color:rgba(250,204,21,.4);background:rgba(250,204,21,.06)}
+.block-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.block-index{font-size:20px;font-weight:900;color:#facc15}
+.block-hash{font-size:12px;color:#64748b;font-family:monospace;word-break:break-all;margin-bottom:10px}
+.block-meta{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+.meta-item .lbl{font-size:11px;color:#94a3b8;text-transform:uppercase}
+.meta-item .val{font-size:14px;font-weight:700;color:#e2e8f0;margin-top:3px}
+.tx-count{
+  padding:4px 12px;border-radius:999px;font-size:12px;font-weight:800;
+  background:rgba(34,197,94,.2);color:#86efac;border:1px solid rgba(34,197,94,.4)
+}
+.arrow{text-align:center;color:#facc15;font-size:20px;margin:4px 0}
+</style>
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="page">
+  <h1>⛓ Blockchain Explorer</h1>
+  <p class="subtitle">Real-time Proof-of-Work blockchain — CryptoFusion</p>
+
+  {% if stats %}
+  <div class="stats-row">
+    <div class="stat"><div class="lbl">Total Blocks</div><div class="val">{{ stats.total_blocks }}</div></div>
+    <div class="stat"><div class="lbl">Chain Valid</div><div class="val {{ 'green' if stats.chain_valid else 'red' }}">{{ '✔ YES' if stats.chain_valid else '✘ NO' }}</div></div>
+    <div class="stat"><div class="lbl">Mined Txns</div><div class="val">{{ stats.total_mined }}</div></div>
+    <div class="stat"><div class="lbl">Pending Txns</div><div class="val">{{ stats.pending_count }}</div></div>
+  </div>
+  {% endif %}
+
+  {% if message %}
+  <div class="msg">{{ message }}</div>
+  {% endif %}
+
+  <a class="mine-btn" href="{{ url_for('blockchain.mine_block') }}">⛏ Mine Pending Transactions</a>
+
+  <div class="chain">
+    {% for block in chain|reverse %}
+    <div class="block-card {{ 'genesis' if block.index == 0 else '' }}">
+      <div class="block-header">
+        <span class="block-index">Block #{{ block.index }}</span>
+        <span class="tx-count">{{ block.transactions|length }} txns</span>
+      </div>
+      <div class="block-hash">Hash: {{ block.hash }}</div>
+      <div class="block-hash">Prev: {{ block.previous_hash }}</div>
+      <div class="block-meta">
+        <div class="meta-item"><div class="lbl">Nonce</div><div class="val">{{ block.nonce }}</div></div>
+        <div class="meta-item"><div class="lbl">Difficulty</div><div class="val">{{ block.hash[:3] }}</div></div>
+        <div class="meta-item"><div class="lbl">Type</div><div class="val">{{ 'Genesis' if block.index == 0 else 'Mined' }}</div></div>
+      </div>
+    </div>
+    {% if not loop.last %}<div class="arrow">↑</div>{% endif %}
+    {% endfor %}
+  </div>
+</div>
+</body>
+</html>

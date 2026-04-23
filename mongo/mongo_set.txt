@@ -1,0 +1,3 @@
+Database Name: cryptoplus
+Collection: users, coins, transactions
+URI: mongodb://localhost:27017/

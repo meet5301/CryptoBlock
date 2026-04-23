@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard | CryptoBlock</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="logo">CryptoBlock</div>
+      <a class="active" href="/dashboard">Dashboard</a>
+      <a href="/transaction/send">Send</a>
+      <a href="/blockchain/view">Blockchain</a>
+      <a href="/ai/monitor">AI Monitor</a>
+      <a href="/wallet/detail">Wallet</a>
+      <a href="/admin/stats">Admin</a>
+    </aside>
+
+    <main class="main">
+      <header class="topbar">
+        <div>
+          <h3 class="muted">Balance</h3>
+          <h1>{{ wallet.balance }} CSC</h1>
+        </div>
+        <div class="status">
+          <span class="dot"></span>
+          AI ACTIVE
+        </div>
+      </header>
+
+      <section class="chart-card">
+        <h3>Transaction Activity (Last 7)</h3>
+        <canvas id="txChart" height="110"></canvas>
+      </section>
+
+      <section class="cards">
+        <div class="card">
+          <p class="muted">Total Transactions</p>
+          <h2>{{ received_transactions|length }}</h2>
+        </div>
+        <div class="card">
+          <p class="muted">Blocks Mined</p>
+          <h2 class="positive">✔</h2>
+        </div>
+        <div class="card">
+          <p class="muted">AI Alerts</p>
+          <h2 class="warning">Monitoring</h2>
+        </div>
+      </section>
+
+      <section class="table-card">
+        <h3>Received Transactions</h3>
+        <table>
+          <thead>
+            <tr>
+              <th>From</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for tx in received_transactions %}
+            <tr>
+              <td>{{ tx.sender }}</td>
+              <td>{{ tx.amount }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+  <script>
+    const txAmountsRaw = [
+      {% for tx in received_transactions %}
+      {{ tx.amount|default(0) }}{% if not loop.last %},{% endif %}
+      {% endfor %}
+    ];
+
+    const dummy = [100, 250, 180, 400, 320, 500, 280];
+    const txAmounts = txAmountsRaw.length ? txAmountsRaw.slice(-7) : dummy;
+    const labels = txAmounts.map((_, index) => `TX ${index + 1}`);
+
+    const ctx = document.getElementById('txChart');
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels,
+        datasets: [{
+          label: 'Amount',
+          data: txAmounts,
+          borderColor: '#22c55e',
+          backgroundColor: 'rgba(34, 197, 94, 0.15)',
+          fill: true,
+          borderWidth: 2,
+          pointRadius: 3,
+          pointBackgroundColor: '#22c55e',
+          tension: 0.3
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: {
+            ticks: { color: '#9ca3af' },
+            grid: { display: false }
+          },
+          y: {
+            ticks: { color: '#9ca3af' },
+            grid: { display: false }
+          }
+        }
+      }
+    });
+  </script>
+</body>
+</html>

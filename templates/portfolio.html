@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CryptoPlus | Portfolio</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+
+body{
+  font-family:"Segoe UI",Inter,system-ui;
+  color:white;
+  background:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px),
+    #0a1f44;
+  background-size:42px 42px;
+  animation:gridMove 20s linear infinite;
+  padding:120px 8% 60px;
+}
+
+@keyframes gridMove{
+  from{background-position:0 0,0 0}
+  to{background-position:80px 80px,80px 80px}
+}
+
+.portfolio h2{
+  font-size:38px;
+  font-weight:900;
+  margin-bottom:18px;
+  color:#facc15;
+}
+
+.portfolio-summary{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:24px;
+  margin-bottom:40px;
+}
+
+.summary-card{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:18px;
+  padding:28px;
+}
+
+.summary-card span{font-size:14px;color:#94a3b8}
+.summary-card h3{margin-top:10px;font-size:32px;font-weight:900}
+
+.profit h3{color:#22c55e}
+.loss h3{color:#ef4444}
+
+.history-table{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:18px;
+  overflow:hidden;
+}
+
+.history-table table{width:100%;border-collapse:collapse}
+.history-table th,.history-table td{
+  padding:16px 20px;
+  text-align:center;
+}
+
+.history-table thead{background:rgba(255,255,255,.08)}
+.history-table tbody tr{border-bottom:1px solid rgba(255,255,255,.08)}
+
+.up{color:#22c55e;font-weight:800}
+.down{color:#ef4444;font-weight:800}
+
+.sell-btn{
+  padding:8px 18px;
+  border-radius:999px;
+  border:1px solid rgba(239,68,68,.6);
+  background:rgba(239,68,68,.25);
+  color:#fecaca;
+  font-weight:800;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+{% include "navbar.html" %}
+
+<section class="portfolio">
+
+<h2>Profit & Loss Overview</h2>
+
+<div class="portfolio-summary">
+  <div class="summary-card profit">
+    <span>Total Profit</span>
+    <h3>₹ {{ total_profit }}</h3>
+  </div>
+  <div class="summary-card loss">
+    <span>Total Loss</span>
+    <h3>₹ {{ total_loss }}</h3>
+  </div>
+</div>
+
+<!-- ================= RUNNING TRADES ================= -->
+<h2 style="margin-bottom:14px">Running Trades</h2>
+
+<div class="history-table" style="margin-bottom:40px">
+<table>
+<thead>
+<tr>
+  <th>Coin</th>
+  <th>Qty</th>
+  <th>P/L</th>
+  <th>Action</th>
+</tr>
+</thead>
+
+<tbody>
+{% if running_trades %}
+  {% for r in running_trades %}
+  <tr>
+    <td>{{ r.coin }}</td>
+    <td>{{ r.qty }}</td>
+    <td class="{{ 'up' if r.pnl >= 0 else 'down' }}">
+      ₹ {{ r.pnl }}
+    </td>
+    <td>
+      <button class="sell-btn"
+        onclick="sellTrade('{{ r.coin }}')">
+        SELL
+      </button>
+    </td>
+  </tr>
+  {% endfor %}
+{% else %}
+  <tr>
+    <td colspan="4" style="color:#94a3b8;padding:30px">
+      No running trades
+    </td>
+  </tr>
+{% endif %}
+</tbody>
+</table>
+</div>
+
+<!-- ================= HISTORY ================= -->
+<h2 style="margin-bottom:14px">Trade History</h2>
+
+<div class="history-table">
+<table>
+<thead>
+<tr>
+  <th>Coin</th>
+  <th>Result</th>
+  <th>Amount</th>
+  <th>Date</th>
+</tr>
+</thead>
+
+<tbody>
+{% if trade_history %}
+  {% for h in trade_history %}
+  <tr>
+    <td>{{ h.coin }}</td>
+    <td>
+      {% if h.amount >= 0 %}
+        <span class="up">Profit</span>
+      {% else %}
+        <span class="down">Loss</span>
+      {% endif %}
+    </td>
+    <td>
+      {% if h.amount >= 0 %}
+        <span class="up">+₹{{ h.amount }}</span>
+      {% else %}
+        <span class="down">₹{{ h.amount }}</span>
+      {% endif %}
+    </td>
+    <td>{{ h.created_at.strftime("%d %b %Y %H:%M") }}</td>
+  </tr>
+  {% endfor %}
+{% else %}
+  <tr>
+    <td colspan="4" style="color:#94a3b8;padding:30px">
+      No history yet
+    </td>
+  </tr>
+{% endif %}
+</tbody>
+</table>
+</div>
+
+</section>
+
+<script>
+function sellTrade(coin){
+  fetch("/api/trade",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      coin: coin,
+      action: "SELL"
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.error) alert(d.error);
+    else location.reload();
+  });
+}
+</script>
+
+</body>
+</html>

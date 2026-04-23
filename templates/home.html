@@ -1,0 +1,1135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CryptoPlus</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+
+body{
+  font-family:"Segoe UI",Inter,system-ui;
+  background:#0a1f44;
+  color:white;
+}
+
+/* ================= NAV ================= */
+.nav{
+  position:fixed;
+  top:0;left:0;
+  width:100%;
+  padding:22px 8%;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  background:rgba(10,31,68,.92);
+  z-index:100;
+}
+.logo{
+  font-size:28px;
+  font-weight:900;
+  color:#facc15;
+}
+.nav button{
+  padding:10px 26px;
+  border-radius:999px;
+  background:#facc15;
+  border:none;
+  font-weight:800;
+  color:#0a1f44;
+}
+
+/* ================= HERO ================= */
+.hero{
+  min-height:100vh;
+  padding:140px 8% 80px;
+  display:flex;
+  gap:40px;
+  position:relative;
+  overflow:hidden;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px);
+  background-size:42px 42px;
+  animation:gridMove 20s linear infinite;
+}
+@keyframes gridMove{
+  from{background-position:0 0,0 0}
+  to{background-position:80px 80px,80px 80px}
+}
+.hero::after{
+  content:"";
+  position:absolute;
+  top:-20%;
+  right:-10%;
+  width:60%;
+  height:140%;
+  background:radial-gradient(circle,rgba(250,204,21,0.18),transparent 65%);
+}
+.hero-left{max-width:520px}
+.hero h1{
+  font-size:82px;
+  font-weight:900;
+  line-height:1.05;
+}
+.hero span{color:#facc15}
+
+/* SEARCH */
+.hero-search{
+  margin-top:22px;
+  display:flex;
+  gap:10px;
+}
+.hero-search input{
+  flex:1;
+  padding:14px 18px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.25);
+  background:#020617;
+  color:white;
+}
+.hero-search button{
+  padding:14px 22px;
+  border-radius:999px;
+  border:none;
+  background:#facc15;
+  font-weight:900;
+  cursor:pointer;
+  color:#0a1f44;
+}
+
+/* ================= MARKET ================= */
+.market{
+  padding:80px 6% 40px;
+}
+.market h2{
+  font-size:36px;
+  font-weight:900;
+  margin-bottom:20px;
+  color:#facc15;
+}
+
+/* GRID */
+.grid{
+  display:flex;
+  gap:28px;
+}
+
+/* CHART */
+.chart-box{
+  flex:0 0 75%;
+  height:480px;
+  border-radius:18px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+}
+
+/* SIDE */
+.side{
+  flex:0 0 25%;
+  height:480px;
+  padding:22px;
+  border-radius:18px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+}
+.coin{
+  display:flex;
+  justify-content:space-between;
+  padding:10px 0;
+  border-bottom:1px solid rgba(255,255,255,.15);
+}
+.up{color:#22c55e}
+.down{color:#ef4444}
+
+/* TABLE */
+.table-section{
+  margin-top:40px;
+  background:#0b1e3a;
+  border-radius:18px;
+  overflow:hidden;
+}
+.crypto-table{
+  width:100%;
+  border-collapse:collapse;
+}
+.crypto-table th,.crypto-table td{
+  padding:14px 40px;
+  text-align:center;
+}
+.crypto-table thead{background:#102a52}
+.crypto-table tbody tr{border-bottom:1px solid rgba(255,255,255,.08)}
+.crypto-table tbody tr:hover{background:rgba(255,255,255,.05)}
+
+/* SEARCH HIGHLIGHT */
+.highlight{
+  background:rgba(250,204,21,0.25)!important;
+  box-shadow:0 0 0 2px rgba(250,204,21,0.9) inset;
+  border-radius:12px;
+  transition:.3s;
+}
+
+canvas{width:100%;height:100%}
+
+/* MINI MARKET */
+.mini-market{padding:60px 6%}
+.mini-grid{
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:22px;
+}
+.mini-card{
+  position:relative;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:16px;
+  padding:10px;
+  cursor:pointer;
+  transition:.3s;
+}
+.mini-card:hover{
+  border-color:#facc15;
+  transform:translateY(-4px);
+}
+.mini-title{
+  position:absolute;
+  top:10px;
+  left:60px;
+  font-size:13px;
+  color:#94a3b8;
+  font-weight:600;
+  z-index:10;
+}
+.mini-card canvas{height:160px}
+
+/* BIG POPUP */
+.big-chart-modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  z-index:9999;
+  background:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px),
+    #0a1f44;
+  background-size:42px 42px;
+  animation:gridMove 20s linear infinite;
+}
+
+.big-chart-layout{
+  display:flex;
+  height:100%;
+  padding:40px 6%;
+  gap:30px;
+  animation:popupIn .35s ease;
+}
+
+@keyframes popupIn{
+  from{opacity:0;transform:scale(.96)}
+  to{opacity:1;transform:scale(1)}
+}
+
+.big-chart-box{
+  flex:3;
+  background:rgba(255,255,255,.05);
+  backdrop-filter:blur(200px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:18px;
+  padding:20px;
+  box-shadow:0 0 40px rgba(250,204,21,.08);
+}
+
+.big-chart-box h2{
+  font-size:26px;
+  color:#facc15;
+  margin-bottom:10px;
+  text-shadow:0 0 12px rgba(250,204,21,.5);
+}
+
+.trade-panel{
+  background:rgba(255,255,255,.05);
+  backdrop-filter:blur(180px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:18px;
+  padding:24px 22px;
+  box-shadow:0 0 40px rgba(0,0,0,.4);
+}
+
+.trade-panel button{
+  width:100%;
+  padding:14px 0;
+  font-size:15px;
+  border-radius:999px;
+  font-weight:800;
+  backdrop-filter:blur(8px);
+  transition:.3s;
+}
+
+.buy{
+  background:rgba(34,197,94,.25);
+  border:1px solid rgba(34,197,94,.55);
+  color:#bbf7d0;
+}
+.sell{
+  background:rgba(239,68,68,.25);
+  border:1px solid rgba(239,68,68,.55);
+  color:#fecaca;
+}
+.trade-panel button:hover{
+  transform:translateY(-2px);
+  filter:brightness(1.1);
+}
+
+.trade-panel .stats{
+  margin-top:22px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:14px;
+}
+.trade-panel .stats div{
+  background:rgba(255,255,255,.07);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:14px;
+  padding:12px;
+  font-size:13px;
+  color:#cbd5f5;
+}
+.trade-panel .stats span{
+  display:block;
+  margin-top:6px;
+  font-size:16px;
+  font-weight:800;
+  color:#facc15;
+}
+.trade-panel .buy{
+  margin-bottom:14px;
+}
+
+
+.close-btn{
+  position:absolute;
+  top:20px;
+  right:30px;
+  font-size:40px;
+  color:#facc15;
+  cursor:pointer;
+}
+/* ================= HERO SEARCH ================= */
+.hero-search{
+  margin-top:22px;
+  display:flex;
+  gap:10px;
+}
+
+.hero-search input{
+  flex:1;
+  padding:14px 18px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.25);
+  background:#020617;
+  color:white;
+  font-size:14px;
+}
+
+.hero-search button{
+  padding:14px 26px;
+  border-radius:999px;
+  border:none;
+  background:#facc15;
+  font-weight:900;
+  cursor:pointer;
+  color:#0a1f44;
+  transition:.3s;
+}
+
+.hero-search button:hover{
+  transform:translateY(-2px);
+  box-shadow:0 0 20px rgba(250,204,21,.45);
+}
+
+/* ================= HERO ACTION BUTTONS ================= */
+.hero-actions{
+  margin-top:28px;
+  display:flex;
+  gap:18px;
+}
+
+.hero-actions button{
+  padding:16px 38px;
+  border-radius:999px;
+  font-weight:900;
+  border:none;
+  cursor:pointer;
+  font-size:15px;
+  transition:.3s;
+}
+
+/* YELLOW BUTTON */
+.btn-yellow{
+  background:#facc15;
+  color:#0a1f44;
+  box-shadow:0 0 20px rgba(250,204,21,.35);
+}
+
+.btn-yellow:hover{
+  transform:translateY(-2px);
+  box-shadow:0 0 30px rgba(250,204,21,.6);
+}
+
+/* WHITE BUTTON */
+.btn-white{
+  background:rgba(255,255,255,.9);
+  color:#0a1f44;
+}
+
+.btn-white:hover{
+  transform:translateY(-2px);
+  background:white;
+  box-shadow:0 0 18px rgba(255,255,255,.45);
+}
+/* MAIN CHART */
+.chart-box{
+  flex:0 0 75%;
+  height:480px;          /* FIXED */
+}
+
+/* MINI CHART */
+.mini-card canvas{
+  height:160px !important;   /* FIXED */
+  width:100% !important;
+}
+
+/* BIG POPUP CHART */
+.big-chart-box{
+  height:100%;
+}
+
+#bigChart{
+  width:100% !important;
+  height:100% !important;
+}
+.trade-inputs input{
+  width:100%;
+  padding:12px 14px;
+  margin-bottom:10px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.25);
+  background:#020617;
+  color:white;
+  font-size:14px;
+}
+
+.trade-inputs input:focus{
+  outline:none;
+  border-color:#facc15;
+  box-shadow:0 0 12px rgba(250,204,21,.35);
+}
+
+
+</style>
+
+</head>
+
+<body>
+
+{% include "navbar.html" %}
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <h1>REVOLUTION<br><span>CRYPTO</span> PLATFORM</h1>
+
+    <div class="hero-search">
+      <input id="searchInput" placeholder="Search crypto (OPT, ETH, BNB)">
+      <button onclick="searchCrypto()">Search</button>
+    </div>
+
+    <div class="hero-actions">
+      <button class="btn-yellow" onclick="goMarket()">Live Chart</button>
+      <button class="btn-white">Explore</button>
+    </div>
+  </div>
+</section>
+
+<!-- MARKET -->
+<section class="market" id="market">
+<h2>Live Market Overview</h2>
+
+<div class="grid">
+  <div class="chart-box">
+    <canvas id="chart"></canvas>
+  </div>
+
+  <div class="side">
+    <h2>Top Crypto</h2>
+    <div class="coin"><span>OPT</span><span class="up">₹87,600</span></div>
+    <div class="coin"><span>ETH</span><span class="up">₹2,980</span></div>
+    <div class="coin"><span>BNB</span><span class="down">₹857</span></div>
+    <div class="coin"><span>XRP</span><span class="down">₹1.86</span></div>
+    <div class="coin"><span>GAL</span><span class="up">₹123</span></div>
+  </div>
+</div>
+
+<div class="table-section">
+<table class="crypto-table">
+<thead>
+<tr>
+<th>#</th><th>Name</th><th>Price</th><th>24h %</th><th>Market Cap</th>
+</tr>
+</thead>
+<tbody>
+<tr data-coin="OPT"><td>1</td><td>OPT</td><td>$87,672</td><td class="up">+0.38%</td><td>$1.75T</td></tr>
+<tr data-coin="ETH"><td>2</td><td>ETH</td><td>$2,979</td><td class="down">-1.03%</td><td>$359B</td></tr>
+<tr data-coin="BNB"><td>3</td><td>BNB</td><td>$857</td><td class="up">+1.03%</td><td>$118B</td></tr>
+<tr data-coin="XRP"><td>4</td><td>XRP</td><td>$1.86</td><td class="down">-0.88%</td><td>$112B</td></tr>
+<tr data-coin="GAL"><td>5</td><td>GAL</td><td>$123</td><td class="up">+0.56%</td><td>$70B</td></tr>
+</tbody>
+</table>
+</div>
+</section>
+<!-- MINI CHARTS SECTION -->
+<!-- MINI CHARTS -->
+<!-- MINI CHARTS -->
+<section class="mini-market">
+  <div class="mini-grid">
+
+    <div class="mini-card" onclick="openMarketFromCoin('ALP')">
+      <span class="mini-title">ALP</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('VEC')">
+      <span class="mini-title">VEC</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('ORB')">
+      <span class="mini-title">ORB</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('NVA')">
+      <span class="mini-title">NVA</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('PLS')">
+      <span class="mini-title">PLS</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('ZYN')">
+      <span class="mini-title">ZYN</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('QNT')">
+      <span class="mini-title">QNT</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('FLX')">
+      <span class="mini-title">FLX</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('CRX')">
+      <span class="mini-title">CRX</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('AXN')">
+      <span class="mini-title">AXN</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('LUM')">
+      <span class="mini-title">LUM</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+    <div class="mini-card" onclick="openMarketFromCoin('PRM')">
+      <span class="mini-title">PRM</span>
+      <canvas class="miniChart"></canvas>
+    </div>
+
+  </div>
+</section>
+
+<!-- BLOCKCHAIN STATS BAR -->
+{% if bc_stats %}
+<section style="background:rgba(250,204,21,.06);border-top:1px solid rgba(250,204,21,.2);border-bottom:1px solid rgba(250,204,21,.2);">
+  <div style="display:grid;grid-template-columns:repeat(4,1fr);max-width:1200px;margin:auto;">
+    <div style="padding:22px;text-align:center;border-right:1px solid rgba(255,255,255,.08)">
+      <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">Total Blocks</div>
+      <div style="font-size:26px;font-weight:900;color:#facc15;margin-top:6px">{{ bc_stats.total_blocks }}</div>
+    </div>
+    <div style="padding:22px;text-align:center;border-right:1px solid rgba(255,255,255,.08)">
+      <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">Chain Valid?</div>
+      <div style="font-size:26px;font-weight:900;margin-top:6px;color:{{ '#22c55e' if bc_stats.chain_valid else '#ef4444' }}">{{ '✔ YES' if bc_stats.chain_valid else '✘ NO' }}</div>
+    </div>
+    <div style="padding:22px;text-align:center;border-right:1px solid rgba(255,255,255,.08)">
+      <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">Pending Txns</div>
+      <div style="font-size:26px;font-weight:900;color:#facc15;margin-top:6px">{{ bc_stats.pending_count }}</div>
+    </div>
+    <div style="padding:22px;text-align:center">
+      <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">Avg Risk Score</div>
+      <div style="font-size:26px;font-weight:900;color:#f59e0b;margin-top:6px">{{ bc_stats.avg_risk }}</div>
+    </div>
+  </div>
+</section>
+{% endif %}
+
+<!-- BIG CHART MODAL -->
+<div id="bigChartModal" class="big-chart-modal">
+
+  <span class="close-btn" onclick="closeBigChart()">×</span>
+
+  <div class="big-chart-layout">
+
+    <!-- LEFT : BIG CHART -->
+    <div class="big-chart-box">
+      <h2 id="bigCoinTitle">OPT / INR</h2>
+      <canvas id="bigChart"></canvas>
+    </div>
+
+    <!-- RIGHT : TRADE PANEL -->
+    <div class="trade-panel">
+      <!-- BUY OPTIONS -->
+<div class="trade-inputs">
+  <input id="qtyInput" type="number" value="1" min="1" placeholder="Quantity">
+  <input id="buyAtPrice" type="number" placeholder="Buy at price (optional)">
+  <input id="slInput" type="number" placeholder="Stop Loss price">
+</div>
+
+      <button class="buy" id="buyBtn">Buy</button>
+      <button class="sell" id="sellBtn">Sell</button>
+
+      <div class="stats">
+        <div>Today High: <span id="todayHigh"></span></div>
+        <div>Today Low: <span id="todayLow"></span></div>
+        <div>ATH: <span id="ath"></span></div>
+        <div>ATL: <span id="atl"></span></div>
+      </div>
+
+    </div>
+
+  </div>
+</div>
+
+
+<script>
+  const bigChartModal = document.getElementById("bigChartModal");
+const buyBtn = document.getElementById("buyBtn");
+const sellBtn = document.getElementById("sellBtn");
+
+/* ================= GLOBAL ================= */
+const ONE_MIN = 60000;
+function rand(a,b){ return Math.random()*(b-a)+a; }
+function safeRange(min,max){
+  if(max-min < 1) return [min-1, max+1];
+  return [min,max];
+}
+
+/* ================= MAIN CHART ================= */
+const mainCanvas = document.getElementById("chart");
+const mainCtx = mainCanvas.getContext("2d");
+
+function resizeMain(){
+  const r = mainCanvas.getBoundingClientRect();
+  mainCanvas.width = r.width;
+  mainCanvas.height = r.height;
+}
+resizeMain();
+window.addEventListener("resize", resizeMain);
+
+const MAX_MAIN = 60;
+let mainCandles = [];
+let mainPrice = rand(800,1800);
+let mainCurrent=null, mainStart=0;
+
+/* INIT */
+for(let i=0;i<MAX_MAIN;i++){
+  let o=mainPrice, c=o+rand(-15,15);
+  mainCandles.push({
+    time:Date.now()-(MAX_MAIN-i)*ONE_MIN,
+    open:o, close:c,
+    high:Math.max(o,c),
+    low:Math.min(o,c)
+  });
+  mainPrice=c;
+}
+
+/* UPDATE */
+function updateMain(){
+  if(!mainCurrent){
+    mainStart=Math.floor(Date.now()/ONE_MIN)*ONE_MIN;
+    mainCurrent={time:mainStart,open:mainPrice,close:mainPrice,high:mainPrice,low:mainPrice};
+    mainCandles.push(mainCurrent);
+    if(mainCandles.length>MAX_MAIN) mainCandles.shift();
+  }
+
+  mainPrice+=rand(-8,8);
+  mainCurrent.close=mainPrice;
+  mainCurrent.high=Math.max(mainCurrent.high,mainPrice);
+  mainCurrent.low=Math.min(mainCurrent.low,mainPrice);
+
+  if(Date.now()-mainStart>=ONE_MIN) mainCurrent=null;
+}
+
+/* DRAW */
+function drawMain(){
+  mainCtx.clearRect(0,0,mainCanvas.width,mainCanvas.height);
+
+  const left=70,right=20,top=20,bottom=45;
+  const h=mainCanvas.height-top-bottom;
+  const cw=(mainCanvas.width-left-right)/MAX_MAIN;
+
+  let hi=mainCandles.map(c=>c.high);
+  let lo=mainCandles.map(c=>c.low);
+  let [min,max]=safeRange(Math.min(...lo),Math.max(...hi));
+  min-=10; max+=10;
+
+  const y=p=>mainCanvas.height-bottom-(p-min)/(max-min)*h;
+
+  /* PRICE */
+  mainCtx.fillStyle="#cbd5f5";
+  mainCtx.font="12px Segoe UI";
+  mainCtx.textAlign="left";
+  for(let i=0;i<=4;i++){
+    let p=min+(max-min)/4*i;
+    mainCtx.fillText("₹"+p.toFixed(0),8,y(p)+4);
+  }
+
+  const step=Math.max(1,Math.floor(MAX_MAIN/6));
+
+  mainCandles.forEach((c,i)=>{
+    const x=left+i*cw+cw/2;
+
+    mainCtx.strokeStyle="#94a3b8";
+    mainCtx.beginPath();
+    mainCtx.moveTo(x,y(c.high));
+    mainCtx.lineTo(x,y(c.low));
+    mainCtx.stroke();
+
+    mainCtx.fillStyle=c.close>=c.open?"#22c55e":"#dc2626";
+    mainCtx.fillRect(
+      x-cw*0.3,
+      y(Math.max(c.open,c.close)),
+      cw*0.6,
+      Math.max(Math.abs(y(c.open)-y(c.close)),2)
+    );
+
+    if(i%step===0){
+      const d=new Date(c.time);
+      mainCtx.textAlign="center";
+      mainCtx.fillText(
+        d.getHours()+":"+String(d.getMinutes()).padStart(2,"0"),
+        x,
+        mainCanvas.height-12
+      );
+    }
+  });
+}
+
+setInterval(()=>{ updateMain(); drawMain(); },1000);
+mainCanvas.onclick=openMarketFromMain;
+
+/* ================= MINI CHARTS ================= */
+const MINI_DATA = [];
+const MAX_MINI = 60;
+
+document.querySelectorAll(".miniChart").forEach((canvas, index) => {
+
+  const ctx = canvas.getContext("2d");
+
+  /* ===== FIXED SIZE (NO JUMP) ===== */
+  const rect = canvas.getBoundingClientRect();
+  canvas.width  = rect.width;
+  canvas.height = rect.height;
+
+  /* ===== INITIAL PRICE (<2000 & DIFFERENT) ===== */
+  let price = rand(200, 1900);
+  let candles = [];
+  let current = null;
+  let start = 0;
+
+  /* ===== INIT CANDLES ===== */
+  for(let i = 0; i < MAX_MINI; i++){
+    let open = price;
+    let close = open + rand(-8, 8);
+
+    candles.push({
+      time: Date.now() - (MAX_MINI - i) * ONE_MIN,
+      open: open,
+      close: close,
+      high: Math.max(open, close),
+      low:  Math.min(open, close)
+    });
+
+    price = close;
+  }
+
+  /* ===== SAVE DATA FOR BIG POPUP ===== */
+  const symbol = document.querySelectorAll(".mini-title")[index].innerText;
+  MINI_DATA[index] = { candles, price, symbol };
+
+  /* ================= UPDATE ================= */
+  function update(){
+    if(!current){
+      start = Math.floor(Date.now() / ONE_MIN) * ONE_MIN;
+      current = {
+        time: start,
+        open: price,
+        close: price,
+        high: price,
+        low:  price
+      };
+      candles.push(current);
+      if(candles.length > MAX_MINI) candles.shift();
+    }
+
+    price += rand(-5, 5);
+    current.close = price;
+    current.high  = Math.max(current.high, price);
+    current.low   = Math.min(current.low, price);
+
+    MINI_DATA[index].price = price;
+
+    if(Date.now() - start >= ONE_MIN){
+      current = null;
+    }
+  }
+
+  /* ================= DRAW ================= */
+  function draw(){
+    ctx.clearRect(0,0,canvas.width,canvas.height);
+
+    const left = 40;
+    const right = 10;
+    const top = 10;
+    const bottom = 25;
+
+    const h = canvas.height - top - bottom;
+    const cw = (canvas.width - left - right) / MAX_MINI;
+
+    let hi = candles.map(c => c.high);
+    let lo = candles.map(c => c.low);
+
+    let min = Math.min(...lo);
+    let max = Math.max(...hi);
+    if(max - min < 1){ min -= 1; max += 1; }
+    min -= 6;
+    max += 6;
+
+    const y = p =>
+      canvas.height - bottom - (p - min) / (max - min) * h;
+
+    /* ===== PRICE SCALE : ONLY 4 ===== */
+    ctx.fillStyle = "#cbd5f5";
+    ctx.font = "9px Segoe UI";
+    ctx.textAlign = "left";
+
+    for(let i = 0; i < 4; i++){
+      let p = min + (max - min) / 3 * i;
+      ctx.fillText(
+        "₹" + p.toFixed(0),
+        4,
+        y(p) + 3
+      );
+    }
+
+    /* ===== CANDLES ===== */
+    const step = Math.max(1, Math.floor(MAX_MINI / 3));
+
+    candles.forEach((c, i) => {
+      const x = left + i * cw + cw / 2;
+
+      ctx.strokeStyle = "#94a3b8";
+      ctx.beginPath();
+      ctx.moveTo(x, y(c.high));
+      ctx.lineTo(x, y(c.low));
+      ctx.stroke();
+
+      ctx.fillStyle = c.close >= c.open ? "#22c55e" : "#dc2626";
+      ctx.fillRect(
+        x - cw * 0.3,
+        y(Math.max(c.open, c.close)),
+        cw * 0.6,
+        Math.max(Math.abs(y(c.open) - y(c.close)), 2)
+      );
+
+      /* ===== TIME ===== */
+      if(i % step === 0){
+        const d = new Date(c.time);
+        ctx.fillStyle = "#94a3b8";
+        ctx.font = "9px Segoe UI";
+        ctx.textAlign = "center";
+        ctx.fillText(
+          d.getHours() + ":" + String(d.getMinutes()).padStart(2,"0"),
+          x,
+          canvas.height - 6
+        );
+      }
+    });
+  }
+
+  /* ===== LIVE LOOP ===== */
+  setInterval(() => {
+    update();
+    draw();
+  }, 1000);
+
+});
+
+
+/* ================= BIG POPUP ================= */
+const bigCanvas=document.getElementById("bigChart");
+const bigCtx=bigCanvas.getContext("2d");
+let bigCandles=[],bigPrice=0,bigCurrent=null,bigStart=0;
+let dayHigh=0,dayLow=0;
+
+function resizeBig(){
+  const r=bigCanvas.getBoundingClientRect();
+  bigCanvas.width=r.width;
+  bigCanvas.height=r.height;
+}
+resizeBig();
+window.addEventListener("resize",resizeBig);
+
+function updateBig(){
+  if(!bigCurrent){
+    bigStart=Math.floor(Date.now()/ONE_MIN)*ONE_MIN;
+    bigCurrent={time:bigStart,open:bigPrice,close:bigPrice,high:bigPrice,low:bigPrice};
+    bigCandles.push(bigCurrent);
+    if(bigCandles.length>60) bigCandles.shift();
+  }
+
+  bigPrice+=rand(-8,8);
+  bigCurrent.close=bigPrice;
+  bigCurrent.high=Math.max(bigCurrent.high,bigPrice);
+  bigCurrent.low=Math.min(bigCurrent.low,bigPrice);
+
+  dayHigh=Math.max(dayHigh,bigPrice);
+  dayLow=Math.min(dayLow,bigPrice);
+
+  todayHigh.innerText="₹"+dayHigh.toFixed(0);
+  todayLow.innerText ="₹"+dayLow.toFixed(0);
+
+  if(Date.now()-bigStart>=ONE_MIN) bigCurrent=null;
+}
+
+function drawBig(){
+  bigCtx.clearRect(0,0,bigCanvas.width,bigCanvas.height);
+
+  const left=90,right=30,top=20,bottom=90; // FIXED
+  const h=bigCanvas.height-top-bottom;
+  const cw=(bigCanvas.width-left-right)/60;
+
+  let hi=bigCandles.map(c=>c.high);
+  let lo=bigCandles.map(c=>c.low);
+  let [min,max]=safeRange(Math.min(...lo),Math.max(...hi));
+  min-=15; max+=15;
+
+  const y=p=>bigCanvas.height-bottom-(p-min)/(max-min)*h;
+
+  bigCtx.fillStyle="#cbd5f5";
+  bigCtx.font="12px Segoe UI";
+  bigCtx.textAlign="left";
+  for(let i=0;i<=4;i++){
+    let p=min+(max-min)/4*i;
+    bigCtx.fillText("₹"+p.toFixed(0),18,y(p)+4);
+  }
+
+  const step=Math.max(1,Math.floor(60/6));
+
+  bigCandles.forEach((c,i)=>{
+    const x=left+i*cw+cw/2;
+
+    bigCtx.strokeStyle="#94a3b8";
+    bigCtx.beginPath();
+    bigCtx.moveTo(x,y(c.high));
+    bigCtx.lineTo(x,y(c.low));
+    bigCtx.stroke();
+
+    bigCtx.fillStyle=c.close>=c.open?"#22c55e":"#dc2626";
+    bigCtx.fillRect(
+      x-cw*0.3,
+      y(Math.max(c.open,c.close)),
+      cw*0.6,
+      Math.max(Math.abs(y(c.open)-y(c.close)),2)
+    );
+
+    if(i%step===0){
+      const d=new Date(c.time);
+      bigCtx.textAlign="center";
+      bigCtx.fillText(
+        d.getHours()+":"+String(d.getMinutes()).padStart(2,"0"),
+        x,
+        bigCanvas.height - 40 // FIXED
+      );
+    }
+  });
+}
+
+setInterval(()=>{
+  if(bigChartModal.style.display!=="block") return;
+  updateBig(); drawBig();
+},1000);
+
+/* ================= OPEN / CLOSE ================= */
+function openMarketFromMini(i){
+  const d=MINI_DATA[i];
+  bigChartModal.style.display="block";
+  bigCoinTitle.innerText=d.symbol+" / INR";
+  bigCandles=JSON.parse(JSON.stringify(d.candles));
+  bigPrice=d.price;
+  dayHigh=Math.max(...bigCandles.map(c=>c.high));
+  dayLow=Math.min(...bigCandles.map(c=>c.low));
+  resizeBig();
+}
+
+function openMarketFromMain(){
+  bigChartModal.style.display="block";
+  bigCoinTitle.innerText="CryptoPlus Index / INR";
+  bigCandles=JSON.parse(JSON.stringify(mainCandles));
+  bigPrice=mainPrice;
+  dayHigh=Math.max(...bigCandles.map(c=>c.high));
+  dayLow=Math.min(...bigCandles.map(c=>c.low));
+  resizeBig();
+}
+
+function closeBigChart(){
+  bigChartModal.style.display="none";
+}
+
+
+let autoBuyInterval = null;
+
+function enableAutoBuy(){
+  const target = Number(document.getElementById("buyAtPrice").value);
+  if(!target) return;
+
+  autoBuyInterval = setInterval(()=>{
+    if(bigPrice <= target){
+      trade("BUY");
+      clearInterval(autoBuyInterval);
+      alert("Auto BUY executed @ ₹" + bigPrice);
+    }
+  },1000);
+}
+
+buyBtn.onclick = ()=>{
+  if(document.getElementById("buyAtPrice").value){
+    enableAutoBuy();
+  }else{
+    trade("BUY");
+  }
+};
+
+function showTradePopup(type, price){
+  const box = document.createElement("div");
+  box.innerHTML = `
+    <div style="
+      position:fixed;
+      top:30px;
+      right:30px;
+      padding:16px 26px;
+      border-radius:14px;
+      font-weight:900;
+      z-index:99999;
+      background:${type==="BUY"
+        ?"rgba(34,197,94,.25)"
+        :"rgba(239,68,68,.25)"};
+      border:1px solid ${type==="BUY"
+        ?"rgba(34,197,94,.6)"
+        :"rgba(239,68,68,.6)"};
+      color:${type==="BUY"?"#bbf7d0":"#fecaca"};
+      backdrop-filter:blur(14px);
+    ">
+      ${type} executed @ ₹${price}
+    </div>
+  `;
+  document.body.appendChild(box);
+  setTimeout(()=>box.remove(),3000);
+}
+
+function trade(action){
+  const fixedPrice = Number(bigPrice.toFixed(2));
+
+  fetch("/api/trade",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      coin: bigCoinTitle.innerText.split(" ")[0],
+      price: fixedPrice,
+      qty: Number(qtyInput.value),
+      stoploss: Number(slInput.value),
+      action: action
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    if(d.error) alert(d.error);
+    else showTradePopup(action, fixedPrice);
+  });
+}
+
+
+buyBtn.onclick = ()=>{
+  if(document.getElementById("buyAtPrice").value){
+    enableAutoBuy();
+  }else{
+    trade("BUY");
+  }
+};
+
+
+sellBtn.addEventListener("click", ()=>{
+  trade("SELL");
+});
+
+
+/* ================= OPEN CHART FROM WALLET ================= */
+window.addEventListener("load", () => {
+  const params = new URLSearchParams(window.location.search);
+  const coin = params.get("coin");
+  if(!coin) return;
+
+  const check = setInterval(() => {
+    if(MINI_DATA.length === 0) return;
+
+    let found = false;
+
+    document.querySelectorAll(".mini-title").forEach((t,i)=>{
+      if(t.innerText.trim() === coin){
+        openMarketFromMini(i);
+        found = true;
+        clearInterval(check);
+      }
+    });
+
+    // 🔁 fallback: open MAIN chart if mini not found
+    if(!found){
+      openMarketFromMain();
+      clearInterval(check);
+    }
+
+  }, 200);
+});
+
+function openMarketFromCoin(symbol){
+  document.querySelectorAll(".mini-title").forEach((t, i) => {
+    if(t.innerText.trim() === symbol){
+      openMarketFromMini(i);
+    }
+  });
+}
+
+
+</script>
+
+
+</body>
+</html>

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CryptoPlus | Wallet</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+
+/* ===== GRID BACKGROUND ===== */
+body{
+  font-family:"Segoe UI",Inter,system-ui;
+  color:white;
+  padding-top:90px;
+
+  background:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px),
+    #0a1f44;
+  background-size:42px 42px;
+  animation:gridMove 20s linear infinite;
+}
+
+@keyframes gridMove{
+  from{background-position:0 0,0 0}
+  to{background-position:80px 80px,80px 80px}
+}
+
+/* ===== BACKGROUND WRAPPER ===== */
+.wallet-hero{
+  min-height:calc(100vh - 90px);
+  padding:70px 6%;
+  display:flex;
+  justify-content:center;
+}
+
+/* ===== MAIN LAYOUT ===== */
+.wallet-layout{
+  width:1100px;
+  display:grid;
+  grid-template-columns:1fr 1fr;   /* 50 / 50 */
+  gap:24px;
+  align-items:stretch;             /* same height */
+}
+
+/* ===== COMMON BOX ===== */
+.box{
+  padding:32px;
+  border-radius:22px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(12px);
+
+  display:flex;
+  flex-direction:column;
+}
+
+/* ===== LEFT ===== */
+.box h2{
+  font-size:32px;
+  font-weight:900;
+  margin-bottom:20px;
+  color:#facc15;
+}
+
+.wallet-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 0;
+  border-bottom:1px solid rgba(255,255,255,.15);
+}
+
+.wallet-cash{
+  color:#22c55e;
+  font-weight:900;
+}
+
+.section-title{
+  margin:24px 0 12px;
+  font-size:20px;
+  font-weight:900;
+  color:#facc15;
+}
+
+.detail-btn{
+  padding:6px 16px;
+  border-radius:999px;
+  border:1px solid rgba(250,204,21,.6);
+  background:rgba(250,204,21,.18);
+  color:#fde68a;
+  font-weight:800;
+  cursor:pointer;
+}
+.detail-btn:hover{filter:brightness(1.15)}
+
+/* ===== RIGHT ===== */
+.detail-row{
+  display:flex;
+  justify-content:space-between;
+  padding:12px 0;
+  border-bottom:1px solid rgba(255,255,255,.15);
+}
+
+/* EMPTY STATE */
+.empty{
+  flex:1;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  color:#94a3b8;
+  font-size:16px;
+}
+</style>
+</head>
+
+<body>
+
+{% include "navbar.html" %}
+
+<section class="wallet-hero">
+  <div class="wallet-layout">
+
+    <!-- LEFT BOX -->
+    <div class="box">
+      <h2>Wallet Overview</h2>
+
+      <div class="wallet-row">
+        <span>Cash Balance</span>
+        <span class="wallet-cash">₹ {{ wallet.cash }}</span>
+      </div>
+
+      <div class="section-title">Running Trades</div>
+
+      {% if running_trades %}
+        {% for t in running_trades %}
+        <div class="wallet-row">
+          <span>{{ t.coin }} (Qty {{ t.qty }})</span>
+          <button class="detail-btn"
+            onclick="showDetails(
+              '{{ t.coin }}',
+              '{{ t.qty }}',
+              '{{ t.buy_price }}',
+              '{{ t.created_at.strftime('%d %b %Y %H:%M') }}'
+            )">
+            DETAILS
+          </button>
+        </div>
+        {% endfor %}
+      {% else %}
+        <p style="color:#94a3b8">No running trades</p>
+      {% endif %}
+    </div>
+
+    <!-- RIGHT BOX -->
+    <div class="box">
+
+      <!-- EMPTY -->
+      <div id="emptyState" class="empty">
+        <div>
+          <b>No trade selected</b><br>
+          <small>Click DETAILS to view trade info</small>
+        </div>
+      </div>
+
+      <!-- DETAILS -->
+      <div id="detailState" style="display:none">
+        <h2 id="dCoin"></h2>
+
+        <div class="detail-row">
+          <span>Quantity</span>
+          <span id="dQty"></span>
+        </div>
+
+        <div class="detail-row">
+          <span>Buy Price</span>
+          <span id="dPrice"></span>
+        </div>
+
+        <div class="detail-row">
+          <span>Buy Date</span>
+          <span id="dDate"></span>
+        </div>
+      </div>
+
+    </div>
+
+  </div>
+</section>
+
+<script>
+function showDetails(coin, qty, price, date){
+  document.getElementById("emptyState").style.display="none";
+  document.getElementById("detailState").style.display="block";
+
+  document.getElementById("dCoin").innerText = coin + " Details";
+  document.getElementById("dQty").innerText = qty;
+  document.getElementById("dPrice").innerText = "₹ " + price;
+  document.getElementById("dDate").innerText = date;
+}
+</script>
+
+</body>
+</html>

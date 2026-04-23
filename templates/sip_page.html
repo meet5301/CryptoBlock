@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CryptoPlus | SIP Investment</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+
+body{
+  font-family:"Segoe UI",Inter,system-ui;
+  color:white;
+  padding-top:90px;
+  background:
+    linear-gradient(rgba(255,255,255,0.06) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.06) 1px, transparent 1px),
+    #0a1f44;
+  background-size:42px 42px;
+}
+
+.container{max-width:1200px;margin:auto;padding:40px 6%}
+h1,h3{color:#facc15;font-weight:900}
+.grid{display:grid;grid-template-columns:1.2fr .8fr;gap:28px}
+
+.card{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.15);
+  border-radius:18px;
+  padding:28px;
+}
+
+.form{display:grid;gap:16px}
+.form select,.form input{
+  padding:15px 18px;
+  border-radius:999px;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.3);
+  color:white;
+  font-weight:700;
+}
+.form button{
+  padding:15px;
+  border-radius:999px;
+  background:#facc15;
+  color:#0a1f44;
+  font-weight:900;
+  border:none;
+  cursor:pointer;
+}
+
+.info-box{
+  background:rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:16px;
+  margin-bottom:18px;
+}
+.info-box span{
+  font-size:22px;
+  font-weight:900;
+  color:#facc15;
+}
+
+.sip-row{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:12px 0;
+  border-bottom:1px solid rgba(255,255,255,.15);
+}
+.delete-btn{
+  padding:6px 18px;
+  border-radius:999px;
+  background:rgba(239,68,68,.25);
+  border:1px solid rgba(239,68,68,.6);
+  color:#fecaca;
+  font-weight:800;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+{% include "navbar.html" %}
+
+<div class="container">
+<h1>Crypto SIP Investment</h1>
+
+<div class="grid">
+
+<!-- LEFT -->
+<div class="card">
+  <div class="form">
+    <select id="coin">
+      {% for c,n in coins.items() %}
+        <option value="{{ c }}">{{ n }} ({{ c }})</option>
+      {% endfor %}
+    </select>
+
+    <input type="number" id="amount" value="100" min="100">
+    <input type="number" id="months" value="1" min="1">
+
+    <button type="button" id="startBtn" onclick="startSip()">Start SIP</button>
+  </div>
+</div>
+
+<!-- RIGHT -->
+<div class="card">
+<h3>Wallet Balance</h3>
+<div class="info-box">
+  <span id="walletCash">₹ {{ wallet.cash }}</span>
+</div>
+
+<h3>Active SIP</h3>
+
+<div id="sipList">
+{% for s in sip_list %}
+  {% if s.status == "ACTIVE" %}
+  <div class="sip-row" id="sip-{{ s._id }}">
+    <span>{{ s.coin }} — ₹{{ s.amount }}/month</span>
+    <button class="delete-btn" onclick="askCloseSip('{{ s._id }}')">Close</button>
+  </div>
+  {% endif %}
+{% else %}
+  <p id="noSip" style="color:#94a3b8">No active SIP</p>
+{% endfor %}
+</div>
+</div>
+</div>
+</div>
+
+<!-- CONFIRM POPUP -->
+<div id="confirmBox" style="
+  position:fixed;
+  inset:0;
+  background:rgba(10,31,68,.85);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:9999;
+">
+  <div style="
+    width:360px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.2);
+    border-radius:18px;
+    padding:24px;
+    text-align:center;
+  ">
+    <h3 style="color:#facc15">Confirm Action</h3>
+    <p id="confirmText" style="margin:18px 0;color:#cbd5f5"></p>
+
+    <button onclick="confirmYes()" style="
+      padding:10px 26px;
+      border-radius:999px;
+      background:#facc15;
+      border:none;
+      font-weight:900;
+      margin-right:10px;
+      cursor:pointer;
+    ">YES</button>
+
+    <button onclick="confirmNo()" style="
+      padding:10px 26px;
+      border-radius:999px;
+      background:rgba(239,68,68,.25);
+      border:1px solid rgba(239,68,68,.6);
+      color:#fecaca;
+      font-weight:900;
+      cursor:pointer;
+    ">NO</button>
+  </div>
+</div>
+
+<script>
+const sipList = document.getElementById("sipList");
+const walletCash = document.getElementById("walletCash");
+const startBtn = document.getElementById("startBtn");
+
+function refreshWallet(){
+  fetch("/api/wallet")
+    .then(r=>r.json())
+    .then(d=>{
+      walletCash.innerText = "₹ " + d.cash;
+    });
+}
+
+function startSip(){
+  startBtn.disabled = true;
+
+  fetch("/sip/start",{
+    method:"POST",
+    headers:{ "Content-Type":"application/json" },
+    body:JSON.stringify({
+      coin: coin.value,
+      amount: amount.value,
+      months: months.value
+    })
+  })
+  .then(r=>r.json())
+  .then(d=>{
+    startBtn.disabled = false;
+
+    if(d.error){
+      alert(d.error);
+      return;
+    }
+
+    refreshWallet(); // 🔥 MAIN FIX
+
+    document.getElementById("noSip")?.remove();
+
+    const row = document.createElement("div");
+    row.className = "sip-row";
+    row.id = "sip-"+d.id;
+    row.innerHTML = `
+      <span>${d.coin} — ₹${d.amount}/month</span>
+      <button class="delete-btn" onclick="askCloseSip('${d.id}')">Close</button>
+    `;
+    sipList.prepend(row);
+  })
+  .catch(()=>{
+    startBtn.disabled = false;
+    alert("Server error");
+  });
+}
+
+let pendingSipId = null;
+
+function askCloseSip(id){
+  pendingSipId = id;
+  confirmText.innerText = "Are you sure you want to close this SIP?";
+  confirmBox.style.display = "flex";
+}
+
+function confirmYes(){
+  fetch("/sip/close/"+pendingSipId,{method:"POST"})
+  .then(()=> {
+    refreshWallet(); // 🔥 MAIN FIX
+    document.getElementById("sip-"+pendingSipId)?.remove();
+    confirmNo();
+  });
+}
+
+function confirmNo(){
+  pendingSipId=null;
+  confirmBox.style.display="none";
+}
+</script>
+
+</body>
+</html>

@@ -1,0 +1,6 @@
+flask
+pymongo
+werkzeug
+scikit-learn
+numpy
+python-dotenv

@@ -1,0 +1,23 @@
+
+<link rel="stylesheet" href="/static/css/style.css">
+<div class="card">
+<h2>{{name}} ({{symbol}})</h2>
+<p>Price: {{price}}</p>
+<form method="post">
+<input name="qty" type="number" placeholder="Qty">
+{% if logged_in %}
+  <button name="action" value="buy">Buy</button>
+  <button name="action" value="sell">Sell</button>
+{% else %}
+  <button disabled style="opacity:.4;cursor:not-allowed">Buy</button>
+  <button disabled style="opacity:.4;cursor:not-allowed">Sell</button>
+  <p style="margin-top:10px;color:#facc15">
+    Login to trade
+  </p>
+{% endif %}
+
+</form>
+<p>Cash: {{wallet.cash}}</p>
+<p>Coins: {{wallet.coins[symbol]}}</p>
+<a href="/home">Back</a>
+</div>

@@ -1,0 +1,30 @@
+version: "3.9"
+
+services:
+  mongo:
+    image: mongo:7
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+
+  app:
+    build: .
+    environment:
+      APP_ENV: development
+      MONGO_URI: mongodb://mongo:27017/
+      DATABASE_NAME: CryptoIntel
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - mongo
+      - redis
+    ports:
+      - "8000:8000"
+
+volumes:
+  mongo_data:

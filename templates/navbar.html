@@ -1,0 +1,60 @@
+<style>
+.nav{
+  position:fixed;top:0;left:0;width:100%;
+  padding:18px 6%;
+  display:flex;align-items:center;gap:6px;
+  background:rgba(10,31,68,.95);
+  backdrop-filter:blur(12px);
+  z-index:100;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.logo{font-size:24px;font-weight:900;color:#facc15;letter-spacing:1px;margin-right:18px}
+.nav a{
+  color:rgba(255,255,255,.75);font-weight:600;font-size:13px;
+  text-decoration:none;padding:7px 12px;border-radius:8px;transition:.2s;white-space:nowrap;
+}
+.nav a:hover{color:#facc15;background:rgba(250,204,21,.1)}
+.nav .nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.btn-nav{
+  padding:9px 22px;border-radius:999px;
+  background:#facc15;border:none;
+  font-weight:800;color:#0a1f44;cursor:pointer;transition:.3s;font-size:13px;
+}
+.btn-nav:hover{transform:translateY(-2px);box-shadow:0 0 18px rgba(250,204,21,.45)}
+.nav-divider{width:1px;height:20px;background:rgba(255,255,255,.15);margin:0 6px}
+</style>
+
+<nav class="nav">
+  <div class="logo">CRYPTOFUSION</div>
+
+  <a href="{{ url_for('home') }}">Home</a>
+  <a href="{{ url_for('home') }}#market">Market</a>
+  <a href="{{ url_for('portfolio') }}">Portfolio</a>
+  <a href="{{ url_for('sip_page') }}">SIP</a>
+
+  <div class="nav-divider"></div>
+
+  <a href="{{ url_for('blockchain.view_chain') }}">⛓ Blockchain</a>
+  <a href="{{ url_for('ai.monitor') }}">🤖 AI Monitor</a>
+
+  <div class="nav-divider"></div>
+
+  <a href="{{ url_for('wallet_page') }}">Wallet</a>
+  <a href="{{ url_for('profile') }}">Profile</a>
+
+  <div class="nav-right">
+    {% if user %}
+      <span style="color:#94a3b8;font-size:13px">{{ user }}</span>
+      <button class="btn-nav" onclick="location.href='{{ url_for('auth.logout') }}'">Logout</button>
+    {% else %}
+      <button class="btn-nav" onclick="location.href='{{ url_for('auth.login') }}'">Login</button>
+    {% endif %}
+  </div>
+</nav>
+
+<script>
+const isLoggedIn = {{ 'true' if user else 'false' }};
+function secureNav(url){
+  window.location.href = isLoggedIn ? url : "{{ url_for('auth.login') }}";
+}
+</script>

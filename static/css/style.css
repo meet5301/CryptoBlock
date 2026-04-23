@@ -1,0 +1,144 @@
+/* ═══════════════════════════════════════════════
+   CRYPTOFUSION — GLOBAL DARK THEME
+   bg: #0a1f44  |  accent: #facc15  |  font: Segoe UI
+═══════════════════════════════════════════════ */
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+
+body{
+  font-family:"Segoe UI",Inter,system-ui;
+  background:#0a1f44;
+  color:white;
+}
+
+/* ── ANIMATED GRID BG ── */
+.grid-bg{
+  background:
+    linear-gradient(rgba(255,255,255,0.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.06) 1px,transparent 1px),
+    #0a1f44;
+  background-size:42px 42px;
+  animation:gridMove 20s linear infinite;
+}
+@keyframes gridMove{
+  from{background-position:0 0,0 0}
+  to{background-position:80px 80px,80px 80px}
+}
+
+/* ── NAVBAR ── */
+.nav{
+  position:fixed;top:0;left:0;width:100%;
+  padding:18px 6%;
+  display:flex;align-items:center;gap:24px;
+  background:rgba(10,31,68,.95);
+  backdrop-filter:blur(12px);
+  z-index:100;
+  border-bottom:1px solid rgba(255,255,255,.08);
+}
+.logo{font-size:26px;font-weight:900;color:#facc15;letter-spacing:1px}
+.nav a{
+  color:rgba(255,255,255,.75);font-weight:600;font-size:14px;
+  text-decoration:none;padding:6px 10px;border-radius:8px;transition:.2s;
+}
+.nav a:hover{color:#facc15;background:rgba(250,204,21,.1)}
+.nav .nav-right{margin-left:auto;display:flex;align-items:center;gap:12px}
+.btn-nav{
+  padding:9px 22px;border-radius:999px;
+  background:#facc15;border:none;
+  font-weight:800;color:#0a1f44;cursor:pointer;transition:.3s;
+}
+.btn-nav:hover{transform:translateY(-2px);box-shadow:0 0 18px rgba(250,204,21,.45)}
+
+/* ── CARDS / BOXES ── */
+.box{
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:18px;padding:28px;
+  backdrop-filter:blur(12px);
+}
+.box h2,.box h3{color:#facc15;font-weight:900;margin-bottom:16px}
+
+/* ── TABLES ── */
+.cf-table{width:100%;border-collapse:collapse}
+.cf-table th,.cf-table td{padding:14px 18px;text-align:center}
+.cf-table thead{background:rgba(255,255,255,.08)}
+.cf-table tbody tr{border-bottom:1px solid rgba(255,255,255,.07)}
+.cf-table tbody tr:hover{background:rgba(255,255,255,.04)}
+
+/* ── BADGES ── */
+.badge{
+  display:inline-block;padding:4px 12px;border-radius:999px;
+  font-size:12px;font-weight:800;
+}
+.badge-green{background:rgba(34,197,94,.2);color:#86efac;border:1px solid rgba(34,197,94,.4)}
+.badge-red{background:rgba(239,68,68,.2);color:#fca5a5;border:1px solid rgba(239,68,68,.4)}
+.badge-yellow{background:rgba(250,204,21,.2);color:#fde68a;border:1px solid rgba(250,204,21,.4)}
+.badge-gray{background:rgba(148,163,184,.15);color:#94a3b8;border:1px solid rgba(148,163,184,.3)}
+
+/* ── BUTTONS ── */
+.btn-yellow{
+  padding:12px 28px;border-radius:999px;border:none;
+  background:#facc15;color:#0a1f44;font-weight:900;cursor:pointer;transition:.3s;
+}
+.btn-yellow:hover{transform:translateY(-2px);box-shadow:0 0 22px rgba(250,204,21,.45)}
+.btn-danger{
+  padding:8px 18px;border-radius:999px;
+  background:rgba(239,68,68,.25);border:1px solid rgba(239,68,68,.6);
+  color:#fecaca;font-weight:800;cursor:pointer;
+}
+.btn-outline{
+  padding:8px 18px;border-radius:999px;
+  background:rgba(250,204,21,.15);border:1px solid rgba(250,204,21,.5);
+  color:#fde68a;font-weight:800;cursor:pointer;
+}
+
+/* ── INPUTS ── */
+.cf-input{
+  width:100%;padding:13px 16px;border-radius:12px;
+  border:1px solid rgba(255,255,255,.2);
+  background:rgba(255,255,255,.06);color:white;font-size:14px;outline:none;
+}
+.cf-input:focus{border-color:#facc15;box-shadow:0 0 10px rgba(250,204,21,.25)}
+.cf-input::placeholder{color:#64748b}
+
+/* ── STAT CARDS ── */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:18px}
+.stat-card{
+  background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;padding:22px;text-align:center;
+}
+.stat-card .label{font-size:13px;color:#94a3b8;margin-bottom:8px}
+.stat-card .value{font-size:26px;font-weight:900;color:#facc15}
+.stat-card .value.green{color:#22c55e}
+.stat-card .value.red{color:#ef4444}
+
+/* ── BLOCKCHAIN STATS BAR ── */
+.bc-stats-bar{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:0;
+  background:rgba(250,204,21,.06);
+  border-top:1px solid rgba(250,204,21,.2);
+  border-bottom:1px solid rgba(250,204,21,.2);
+  margin:40px 0;
+}
+.bc-stat{
+  padding:20px;text-align:center;
+  border-right:1px solid rgba(255,255,255,.08);
+}
+.bc-stat:last-child{border-right:none}
+.bc-stat .bc-label{font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px}
+.bc-stat .bc-val{font-size:22px;font-weight:900;color:#facc15;margin-top:6px}
+
+/* ── UP / DOWN ── */
+.up{color:#22c55e;font-weight:800}
+.down{color:#ef4444;font-weight:800}
+
+/* ── PAGE WRAPPER ── */
+.page-wrap{padding:110px 6% 60px}
+
+/* ── SECTION TITLE ── */
+.section-title{font-size:32px;font-weight:900;color:#facc15;margin-bottom:24px}
+
+/* ── RISK COLORS ── */
+.positive{color:#22c55e}
+.warning{color:#f59e0b}
+.danger{color:#ef4444}
