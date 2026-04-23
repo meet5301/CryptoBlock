@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CryptoFusion | Orders</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Segoe UI",Inter,system-ui;color:white;padding-top:80px;
+  background:linear-gradient(rgba(255,255,255,0.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px),#0a1f44;
+  background-size:42px 42px;animation:gridMove 20s linear infinite;
+}
+@keyframes gridMove{from{background-position:0 0,0 0}to{background-position:80px 80px,80px 80px}}
+.page{max-width:1200px;margin:auto;padding:32px 4%;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+h1{font-size:28px;font-weight:900;color:#facc15;margin-bottom:6px}
+.sub{color:#64748b;font-size:13px;margin-bottom:28px}
+.grid{display:grid;grid-template-columns:1fr 2fr;gap:20px}
+.box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:24px}
+.box h3{font-size:16px;font-weight:800;color:#facc15;margin-bottom:18px}
+label{display:block;font-size:12px;color:#94a3b8;margin-bottom:5px;text-transform:uppercase;letter-spacing:.4px}
+select,input{
+  width:100%;padding:12px 14px;margin-bottom:14px;border-radius:10px;
+  border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);
+  color:white;font-size:14px;outline:none;
+}
+select:focus,input:focus{border-color:#facc15}
+select option{background:#0a1f44}
+.btn-yellow{
+  width:100%;padding:13px;border-radius:999px;border:none;
+  background:#facc15;color:#0a1f44;font-weight:900;font-size:14px;cursor:pointer;transition:.3s;
+}
+.btn-yellow:hover{transform:translateY(-2px);box-shadow:0 0 20px rgba(250,204,21,.4)}
+.cf-table{width:100%;border-collapse:collapse}
+.cf-table th{padding:10px 14px;text-align:left;font-size:11px;color:#64748b;
+  text-transform:uppercase;border-bottom:1px solid rgba(255,255,255,.08)}
+.cf-table td{padding:12px 14px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.05)}
+.cf-table tbody tr:hover{background:rgba(255,255,255,.03)}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11px;font-weight:800}
+.badge-pending{background:rgba(250,204,21,.2);color:#fde68a;border:1px solid rgba(250,204,21,.3)}
+.badge-executed{background:rgba(34,197,94,.2);color:#86efac;border:1px solid rgba(34,197,94,.3)}
+.badge-cancelled{background:rgba(148,163,184,.15);color:#94a3b8;border:1px solid rgba(148,163,184,.2)}
+.badge-buy{background:rgba(34,197,94,.15);color:#86efac}
+.badge-sell{background:rgba(239,68,68,.15);color:#fca5a5}
+.cancel-btn{
+  padding:5px 14px;border-radius:999px;border:1px solid rgba(239,68,68,.5);
+  background:rgba(239,68,68,.15);color:#fca5a5;font-size:12px;font-weight:700;cursor:pointer;
+}
+.cancel-btn:hover{background:rgba(239,68,68,.3)}
+.empty{padding:30px;text-align:center;color:#64748b}
+.cash-badge{
+  display:inline-block;padding:6px 16px;border-radius:999px;
+  background:rgba(34,197,94,.15);border:1px solid rgba(34,197,94,.3);
+  color:#86efac;font-weight:800;font-size:14px;margin-bottom:18px;
+}
+#targetRow{display:none}
+/* TOAST */
+.toast{
+  position:fixed;bottom:24px;right:24px;padding:14px 22px;border-radius:12px;
+  font-weight:700;font-size:14px;z-index:9999;
+  background:rgba(34,197,94,.25);border:1px solid rgba(34,197,94,.5);color:#86efac;
+  backdrop-filter:blur(12px);animation:slideUp .3s ease;display:none;
+}
+@keyframes slideUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+@media(max-width:768px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="page">
+  <h1>Order Management</h1>
+  <p class="sub">Place MARKET, LIMIT, and STOP-LOSS orders</p>
+
+  <div class="grid">
+    <!-- PLACE ORDER FORM -->
+    <div class="box">
+      <h3>Place New Order</h3>
+      <div class="cash-badge">Cash: ₹{{ wallet.cash | round(2) }}</div>
+
+      <label>Coin</label>
+      <select id="oCoin">
+        {% for c in ['BTC','ETH','BNB','SOL','XRP','DOGE','ADA','TRX','MATIC','LTC','AVAX','LINK'] %}
+        <option value="{{ c }}">{{ c }}</option>
+        {% endfor %}
+      </select>
+
+      <label>Order Type</label>
+      <select id="oType" onchange="toggleTarget()">
+        <option value="MARKET">MARKET — Execute Now</option>
+        <option value="LIMIT">LIMIT — Execute at Price</option>
+        <option value="STOP_LOSS">STOP-LOSS — Auto Sell</option>
+      </select>
+
+      <label>Action</label>
+      <select id="oAction">
+        <option value="BUY">BUY</option>
+        <option value="SELL">SELL</option>
+      </select>
+
+      <label>Quantity</label>
+      <input type="number" id="oQty" value="1" min="1">
+
+      <div id="targetRow">
+        <label>Target Price (₹)</label>
+        <input type="number" id="oTarget" placeholder="e.g. 3200">
+      </div>
+
+      <button class="btn-yellow" onclick="placeOrder()">Place Order</button>
+    </div>
+
+    <!-- PENDING ORDERS -->
+    <div>
+      <div class="box" style="margin-bottom:20px">
+        <h3>Pending Orders</h3>
+        {% if pending %}
+        <table class="cf-table">
+          <thead>
+            <tr><th>Coin</th><th>Type</th><th>Action</th><th>Qty</th><th>Target</th><th>Status</th><th></th></tr>
+          </thead>
+          <tbody id="pendingBody">
+            {% for o in pending %}
+            <tr id="row-{{ o._id }}">
+              <td style="font-weight:800;color:#facc15">{{ o.coin }}</td>
+              <td><span class="badge badge-pending">{{ o.type }}</span></td>
+              <td><span class="badge {{ 'badge-buy' if o.action=='BUY' else 'badge-sell' }}">{{ o.action }}</span></td>
+              <td>{{ o.qty }}</td>
+              <td>₹{{ o.target_price }}</td>
+              <td><span class="badge badge-pending">PENDING</span></td>
+              <td><button class="cancel-btn" onclick="cancelOrder('{{ o._id }}')">Cancel</button></td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty" id="pendingBody">No pending orders</div>
+        {% endif %}
+      </div>
+
+      <!-- RECENT ORDERS -->
+      <div class="box">
+        <h3>Recent Orders</h3>
+        {% if recent %}
+        <table class="cf-table">
+          <thead>
+            <tr><th>Coin</th><th>Type</th><th>Action</th><th>Qty</th><th>Status</th><th>Exec Price</th></tr>
+          </thead>
+          <tbody>
+            {% for o in recent %}
+            <tr>
+              <td style="font-weight:800;color:#facc15">{{ o.coin }}</td>
+              <td>{{ o.type }}</td>
+              <td><span class="badge {{ 'badge-buy' if o.action=='BUY' else 'badge-sell' }}">{{ o.action }}</span></td>
+              <td>{{ o.qty }}</td>
+              <td>
+                <span class="badge {{ 'badge-executed' if o.status=='EXECUTED' else 'badge-cancelled' }}">
+                  {{ o.status }}
+                </span>
+              </td>
+              <td>{{ '₹' + o.executed_price|string if o.get('executed_price') else '—' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty">No recent orders</div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+function toggleTarget() {
+  const t = document.getElementById('oType').value;
+  document.getElementById('targetRow').style.display =
+    (t === 'LIMIT' || t === 'STOP_LOSS') ? 'block' : 'none';
+}
+
+function showToast(msg, ok=true) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = ok ? 'rgba(34,197,94,.25)' : 'rgba(239,68,68,.25)';
+  t.style.borderColor = ok ? 'rgba(34,197,94,.5)' : 'rgba(239,68,68,.5)';
+  t.style.color = ok ? '#86efac' : '#fca5a5';
+  t.style.display = 'block';
+  setTimeout(() => t.style.display = 'none', 3000);
+}
+
+function placeOrder() {
+  const type = document.getElementById('oType').value;
+  const body = {
+    coin: document.getElementById('oCoin').value,
+    type: type,
+    action: document.getElementById('oAction').value,
+    qty: parseInt(document.getElementById('oQty').value),
+    target_price: parseFloat(document.getElementById('oTarget').value) || 0,
+  };
+  fetch('/orders/place', {
+    method: 'POST',
+    headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify(body)
+  })
+  .then(r => r.json())
+  .then(d => {
+    if (d.error) { showToast(d.error, false); return; }
+    showToast(d.message || `Order placed @ ₹${d.executed_price || ''}`);
+    if (type === 'MARKET') setTimeout(() => location.reload(), 1500);
+  });
+}
+
+function cancelOrder(id) {
+  fetch('/orders/cancel/' + id, {method: 'POST'})
+  .then(r => r.json())
+  .then(d => {
+    if (d.success) {
+      const row = document.getElementById('row-' + id);
+      if (row) row.remove();
+      showToast('Order cancelled');
+    }
+  });
+}
+</script>
+</body>
+</html>

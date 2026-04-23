@@ -1,14 +1,14 @@
-import random
 import threading
 import time
 from datetime import datetime
 
 from bson import ObjectId
-from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, Response, jsonify, redirect, render_template, request, session, url_for
 
 from config import SECRET_KEY
 from core.blockchain_instance import blockchain
 from core.mempool import mempool
+from price_engine import start as start_price_engine, get_price, get_all_prices, get_history
 from database.mongo import get_db
 
 from api.routes.auth import auth_bp
@@ -17,6 +17,9 @@ from api.routes.ai_monitor import ai_bp
 from api.routes.wallet import wallet_bp
 from api.routes.transaction import transaction_bp
 from api.routes.admin import admin_bp
+from api.routes.orders import orders_bp
+from api.routes.leaderboard import leaderboard_bp
+from api.routes.notifications import notifications_bp
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
@@ -27,47 +30,68 @@ app.register_blueprint(ai_bp, url_prefix="/ai")
 app.register_blueprint(wallet_bp, url_prefix="/wallet")
 app.register_blueprint(transaction_bp, url_prefix="/transaction")
 app.register_blueprint(admin_bp, url_prefix="/admin")
+app.register_blueprint(orders_bp, url_prefix="/orders")
+app.register_blueprint(leaderboard_bp, url_prefix="/leaderboard")
+app.register_blueprint(notifications_bp)
 
-# ─── COINS ────────────────────────────────────────────────────────────────────
 COINS = {
-    "ALP": "AlphaCoin", "VEC": "VectorCoin", "ORB": "OrbitCoin",
-    "NVA": "NovaCoin",  "PLS": "PulseCoin",  "ZYN": "ZynexCoin",
-    "QNT": "Quantia",   "FLX": "Fluxon",     "CRX": "Corex",
-    "AXN": "Axion",     "LUM": "Lumina",     "PRM": "Prisma",
+    "BTC":  {"name": "Bitcoin",   "coingecko_id": "bitcoin"},
+    "ETH":  {"name": "Ethereum",  "coingecko_id": "ethereum"},
+    "BNB":  {"name": "BNB",       "coingecko_id": "binancecoin"},
+    "SOL":  {"name": "Solana",    "coingecko_id": "solana"},
+    "XRP":  {"name": "XRP",       "coingecko_id": "ripple"},
+    "DOGE": {"name": "Dogecoin",  "coingecko_id": "dogecoin"},
+    "ADA":  {"name": "Cardano",   "coingecko_id": "cardano"},
+    "TRX":  {"name": "TRON",      "coingecko_id": "tron"},
+    "MATIC":{"name": "Polygon",   "coingecko_id": "matic-network"},
+    "LTC":  {"name": "Litecoin",  "coingecko_id": "litecoin"},
+    "AVAX": {"name": "Avalanche", "coingecko_id": "avalanche-2"},
+    "LINK": {"name": "Chainlink", "coingecko_id": "chainlink"},
 }
 
 
 # ─── HELPERS ──────────────────────────────────────────────────────────────────
 def _blockchain_stats():
     db = get_db()
-    mined = list(db.transactions.find({"status": "Mined"}))
-    avg_risk = 0.0
-    if mined:
-        from ai.detector import detect_anomalies
-        analyzed = detect_anomalies([{**tx, "_id": str(tx["_id"])} for tx in mined])
-        scores = [t.get("risk_score") or 0 for t in analyzed]
-        avg_risk = round(sum(scores) / len(scores), 1) if scores else 0.0
     return {
         "total_blocks": len(blockchain.chain),
         "chain_valid": blockchain.is_chain_valid(),
         "pending_count": db.transactions.count_documents({"status": "Pending"}),
-        "avg_risk": avg_risk,
+        "avg_risk": 0.0,
     }
 
 
 def _record_blockchain_tx(sender_addr, receiver_addr, amount, coin=None, tx_type="TRADE"):
     db = get_db()
     tx_doc = {
-        "sender": sender_addr,
-        "receiver": receiver_addr,
-        "amount": amount,
-        "coin": coin,
-        "type": tx_type,
-        "status": "Pending",
-        "timestamp": datetime.now(),
+        "sender": sender_addr, "receiver": receiver_addr,
+        "amount": amount, "coin": coin, "type": tx_type,
+        "status": "Pending", "timestamp": datetime.now(),
     }
     db.transactions.insert_one(tx_doc)
     mempool.add_transaction({**tx_doc, "_id": str(tx_doc.get("_id", ""))})
+
+
+def _notify(db, email, message, ntype="TRADE"):
+    db.notifications.insert_one({
+        "user_email": email, "message": message,
+        "type": ntype, "read": False, "created_at": datetime.now(),
+    })
+
+
+# ─── PRICE ENDPOINTS ──────────────────────────────────────────────────────────
+@app.route("/api/prices")
+def prices_json():
+    return jsonify(get_all_prices())
+
+
+@app.route("/api/prices/<symbol>")
+def api_price_single(symbol):
+    return jsonify({
+        "symbol": symbol.upper(),
+        "price": get_price(symbol.upper()),
+        "history": get_history(symbol.upper()),
+    })
 
 
 # ─── ROOT ─────────────────────────────────────────────────────────────────────
@@ -79,10 +103,82 @@ def index():
 # ─── HOME ─────────────────────────────────────────────────────────────────────
 @app.route("/home")
 def home():
-    prices = {c: random.randint(2000, 5000) for c in COINS}
+    prices = get_all_prices()
     bc_stats = _blockchain_stats()
     return render_template("home.html", coins=COINS, prices=prices,
                            user=session.get("user"), bc_stats=bc_stats)
+
+
+# ─── DASHBOARD ────────────────────────────────────────────────────────────────
+@app.route("/dashboard")
+def dashboard():
+    if "user" not in session:
+        return redirect(url_for("auth.login"))
+    db = get_db()
+    user = db.users.find_one({"email": session["user"]})
+    wallet = user["wallet"]
+    prices = get_all_prices()
+
+    coins_data = []
+    total_holdings = 0.0
+    best_coin = worst_coin = None
+    best_pnl = float("-inf")
+    worst_pnl = float("inf")
+
+    for coin, qty in wallet.get("coins", {}).items():
+        if qty <= 0:
+            continue
+        raw = prices.get(coin, {})
+        current = raw.get("inr", 0) if isinstance(raw, dict) else raw
+        avg = wallet.get("avg_price", {}).get(coin, current)
+        value = qty * current
+        unrealized = round((current - avg) * qty, 2)
+        pnl_pct = round((current - avg) / avg * 100, 2) if avg else 0
+        total_holdings += value
+        coins_data.append({
+            "coin": coin, "qty": round(qty, 4),
+            "avg_price": round(avg, 2), "current_price": round(current, 2),
+            "value": round(value, 2), "unrealized_pnl": unrealized, "pnl_pct": pnl_pct,
+        })
+        if unrealized > best_pnl:
+            best_pnl = unrealized
+            best_coin = coin
+        if unrealized < worst_pnl:
+            worst_pnl = unrealized
+            worst_coin = coin
+
+    total_value = round(wallet.get("cash", 0) + total_holdings, 2)
+
+    closed_trades = list(db.profit_loss.find({"email": session["user"], "status": "CLOSED"})
+                         .sort("created_at", -1).limit(10))
+    day_pnl = sum(t.get("amount", 0) for t in closed_trades)
+
+    recent_trades = list(db.trades.find({"email": session["user"]})
+                         .sort("created_at", -1).limit(10))
+    for t in recent_trades:
+        t["_id"] = str(t["_id"])
+        if hasattr(t.get("created_at"), "strftime"):
+            t["created_at"] = t["created_at"].strftime("%d %b %H:%M")
+
+    bc_stats = _blockchain_stats()
+    wallet_addr = wallet.get("wallet_address", "")
+    user_pending = db.transactions.count_documents({
+        "$or": [{"sender": wallet_addr}, {"receiver": wallet_addr}],
+        "status": "Pending",
+    })
+
+    donut_labels = [d["coin"] for d in coins_data]
+    donut_values = [d["value"] for d in coins_data]
+
+    return render_template("dashboard.html",
+                           user=session["user"], wallet=wallet,
+                           coins_data=coins_data, total_value=total_value,
+                           day_pnl=round(day_pnl, 2),
+                           best_coin=best_coin, worst_coin=worst_coin,
+                           recent_trades=recent_trades,
+                           bc_stats=bc_stats, user_pending=user_pending,
+                           wallet_addr=wallet_addr,
+                           donut_labels=donut_labels, donut_values=donut_values)
 
 
 # ─── PORTFOLIO ────────────────────────────────────────────────────────────────
@@ -93,13 +189,16 @@ def portfolio():
     db = get_db()
     user = db.users.find_one({"email": session["user"]})
     wallet = user["wallet"]
+    prices = get_all_prices()
 
     running_trades = []
     for t in db.trades.find({"email": session["user"], "status": "OPEN"}):
-        live_price = random.randint(2000, 5000)
+        raw = prices.get(t["coin"], {})
+        live_price = raw.get("inr", t["buy_price"]) if isinstance(raw, dict) else t["buy_price"]
+        pnl = round((live_price - t["buy_price"]) * t["qty"], 2)
         running_trades.append({
             "coin": t["coin"], "qty": t["qty"],
-            "pnl": round((live_price - t["buy_price"]) * t["qty"], 2),
+            "buy_price": t["buy_price"], "live_price": live_price, "pnl": pnl,
         })
 
     trade_history = list(db.profit_loss.find({"email": session["user"], "status": "CLOSED"}))
@@ -113,13 +212,13 @@ def portfolio():
     for sip in active_sips:
         if not sip.get("executed_months") or not sip.get("units", 0):
             continue
-        total_invested = sip["total_invested"]
-        units = sip["units"]
-        current_value = units * random.randint(2000, 5000)
+        raw = prices.get(sip["coin"], {})
+        cp = raw.get("inr", 0) if isinstance(raw, dict) else raw
+        current_value = sip["units"] * cp
         sip_returns.append({
-            "coin": sip["coin"], "invested": round(total_invested, 2),
+            "coin": sip["coin"], "invested": round(sip["total_invested"], 2),
             "current": round(current_value, 2),
-            "pnl": round(current_value - total_invested, 2),
+            "pnl": round(current_value - sip["total_invested"], 2),
             "progress": f"{sip['executed_months']}/{sip['months']}",
             "status": sip["status"],
         })
@@ -130,7 +229,7 @@ def portfolio():
                            active_sips=active_sips, closed_sips=closed_sips, sip_returns=sip_returns)
 
 
-# ─── WALLET ───────────────────────────────────────────────────────────────────
+# ─── WALLET PAGE ──────────────────────────────────────────────────────────────
 @app.route("/wallet_page")
 def wallet_page():
     if "user" not in session:
@@ -168,7 +267,7 @@ def sip_page():
                            coins=COINS, user=session["user"])
 
 
-# ─── TRADE API ────────────────────────────────────────────────────────────────
+# ─── TRADE API (legacy home.html chart trades) ────────────────────────────────
 @app.route("/api/trade", methods=["POST"])
 def api_trade():
     if "user" not in session:
@@ -181,9 +280,11 @@ def api_trade():
     stoploss = float(data.get("stoploss", 0))
     user = db.users.find_one({"email": session["user"]})
     sender_addr = user["wallet"].get("wallet_address", "")
+    price = get_price(coin)
+    if not price:
+        return jsonify({"error": "Price unavailable, try again"}), 503
 
     if action == "BUY":
-        price = float(data.get("price", 0))
         cost = price * qty
         if user["wallet"]["cash"] < cost:
             return jsonify({"error": "Insufficient balance"}), 400
@@ -198,13 +299,15 @@ def api_trade():
             "amount": 0, "status": "OPEN", "created_at": datetime.now(),
         })
         _record_blockchain_tx(sender_addr, "MARKET", cost, coin, "TRADE")
+        _notify(db, session["user"], f"BUY {qty} {coin} @ ₹{price:.2f}", "TRADE")
         return jsonify({"success": True})
 
     trade = db.trades.find_one({"email": session["user"], "coin": coin, "status": "OPEN"})
     if not trade:
         return jsonify({"error": "No open trade"}), 400
-    movement = random.uniform(-0.15, 0.15)
-    sell_price = round(trade["buy_price"] * (1 + movement), 2)
+    sell_price = get_price(coin)
+    if not sell_price:
+        return jsonify({"error": "Price unavailable"}), 503
     pnl = (sell_price - trade["buy_price"]) * trade["qty"]
     db.users.update_one({"email": session["user"]},
                         {"$inc": {f"wallet.coins.{coin}": -trade["qty"],
@@ -214,10 +317,10 @@ def api_trade():
     db.profit_loss.update_one({"trade_id": trade["_id"]},
                               {"$set": {"amount": round(pnl, 2), "status": "CLOSED"}})
     _record_blockchain_tx("MARKET", sender_addr, sell_price * trade["qty"], coin, "TRADE")
+    _notify(db, session["user"], f"SELL {trade['qty']} {coin} @ ₹{sell_price:.2f} | PnL: ₹{pnl:.2f}", "TRADE")
     return jsonify({"success": True, "pnl": round(pnl, 2)})
 
 
-# ─── WALLET API ───────────────────────────────────────────────────────────────
 @app.route("/api/wallet")
 def api_wallet():
     if "user" not in session:
@@ -227,7 +330,7 @@ def api_wallet():
     return jsonify({"cash": user["wallet"]["cash"]})
 
 
-# ─── SEND CRYPTO (CASH TRANSFER) ──────────────────────────────────────────────
+# ─── SEND CRYPTO ──────────────────────────────────────────────────────────────
 @app.route("/send_crypto", methods=["POST"])
 def send_crypto():
     if "user" not in session:
@@ -236,19 +339,16 @@ def send_crypto():
     sender_email = session["user"]
     receiver_email = request.form["receiver"].strip()
     rupees = float(request.form.get("rupees", 0))
-
     if sender_email == receiver_email:
         return "Cannot send to yourself"
     if rupees <= 0:
         return "Invalid amount"
-
     sender = db.users.find_one({"email": sender_email})
     receiver = db.users.find_one({"email": receiver_email})
     if not receiver:
         return "Receiver not found"
     if sender["wallet"]["cash"] < rupees:
         return "Insufficient balance"
-
     db.users.update_one({"email": sender_email}, {"$inc": {"wallet.cash": -rupees}})
     db.users.update_one({"email": receiver_email}, {"$inc": {"wallet.cash": rupees}})
     db.transfers.insert_one({
@@ -260,6 +360,8 @@ def send_crypto():
         receiver["wallet"].get("wallet_address", receiver_email),
         rupees, None, "TRANSFER",
     )
+    _notify(db, sender_email, f"Sent ₹{rupees} to {receiver_email}", "TRADE")
+    _notify(db, receiver_email, f"Received ₹{rupees} from {sender_email}", "TRADE")
     return redirect(url_for("profile"))
 
 
@@ -327,8 +429,9 @@ def _stoploss_watcher():
         try:
             db = get_db()
             for t in db.trades.find({"status": "OPEN"}):
-                movement = random.uniform(-0.15, 0.05)
-                current_price = round(t["buy_price"] * (1 + movement), 2)
+                current_price = get_price(t["coin"])
+                if not current_price:
+                    continue
                 if t.get("stoploss", 0) > 0 and current_price <= t["stoploss"]:
                     pnl = (current_price - t["buy_price"]) * t["qty"]
                     db.users.update_one({"email": t["email"]},
@@ -339,14 +442,16 @@ def _stoploss_watcher():
                                                    "closed_at": datetime.now()}})
                     db.profit_loss.update_one({"trade_id": t["_id"]},
                                               {"$set": {"amount": round(pnl, 2), "status": "CLOSED"}})
+                    _notify(db, t["email"],
+                            f"Stop-loss triggered: {t['coin']} sold @ ₹{current_price:.2f}", "TRADE")
         except Exception:
             pass
-        time.sleep(5)
+        time.sleep(30)
 
 
 def _sip_executor():
     while True:
-        time.sleep(10)
+        time.sleep(60)
         try:
             db = get_db()
             now = datetime.now()
@@ -356,12 +461,14 @@ def _sip_executor():
                     db.sip.update_one({"_id": sip["_id"]}, {"$set": {"status": "COMPLETED"}})
                     continue
                 last = sip.get("last_executed_at")
-                if last and (now - last).total_seconds() < 10:
+                if last and (now - last).total_seconds() < 60:
                     continue
                 user = db.users.find_one({"email": sip["email"]})
                 if not user or user["wallet"]["cash"] < sip["amount"]:
                     continue
-                price = round(random.randint(2000, 5000) * random.uniform(0.8, 1.2), 2)
+                price = get_price(sip["coin"])
+                if not price:
+                    continue
                 qty = sip["amount"] / price
                 coin = sip["coin"]
                 db.users.update_one({"email": sip["email"]},
@@ -373,12 +480,21 @@ def _sip_executor():
                     "units": sip.get("units", 0) + qty,
                     "last_executed_at": now,
                 }})
+                _notify(db, sip["email"],
+                        f"SIP executed: {qty:.4f} {coin} @ ₹{price:.2f}", "SIP")
         except Exception:
             pass
 
 
 # ─── ENTRY ────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    start_price_engine()
+
+    from core.order_executor import order_executor
+    import price_engine as _pe_module
+    order_executor.start(get_db, _pe_module, _record_blockchain_tx, _notify)
+
     threading.Thread(target=_stoploss_watcher, daemon=True).start()
     threading.Thread(target=_sip_executor, daemon=True).start()
-    app.run(debug=True)
+
+    app.run(debug=True, threaded=True)

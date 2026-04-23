@@ -112,6 +112,8 @@ body{
 <tr>
   <th>Coin</th>
   <th>Qty</th>
+  <th>Buy Price</th>
+  <th>Live Price</th>
   <th>P/L</th>
   <th>Action</th>
 </tr>
@@ -123,6 +125,8 @@ body{
   <tr>
     <td>{{ r.coin }}</td>
     <td>{{ r.qty }}</td>
+    <td>₹{{ "{:,.2f}".format(r.buy_price) }}</td>
+    <td>₹{{ "{:,.2f}".format(r.live_price) }}</td>
     <td class="{{ 'up' if r.pnl >= 0 else 'down' }}">
       ₹ {{ r.pnl }}
     </td>

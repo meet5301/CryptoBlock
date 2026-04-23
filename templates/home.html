@@ -462,12 +462,17 @@ canvas{width:100%;height:100%}
   </div>
 
   <div class="side">
-    <h2>Top Crypto</h2>
-    <div class="coin"><span>OPT</span><span class="up">₹87,600</span></div>
-    <div class="coin"><span>ETH</span><span class="up">₹2,980</span></div>
-    <div class="coin"><span>BNB</span><span class="down">₹857</span></div>
-    <div class="coin"><span>XRP</span><span class="down">₹1.86</span></div>
-    <div class="coin"><span>GAL</span><span class="up">₹123</span></div>
+      {% for symbol, info in coins.items() %}
+    {% set p = prices.get(symbol, {}) %}
+    {% set ch = p.get('change_24h', 0) if p else 0 %}
+    <div class="coin">
+      <span>{{ symbol }}</span>
+      <span id="price-{{ symbol }}" class="{{ 'up' if ch >= 0 else 'down' }}">
+        ₹{{ "{:,.0f}".format(p.get('inr', 0)) if p else '—' }}
+        <small style="font-size:11px">({{ '+' if ch >= 0 else '' }}{{ ch }}%)</small>
+      </span>
+    </div>
+    {% endfor %}
   </div>
 </div>
 
@@ -494,63 +499,63 @@ canvas{width:100%;height:100%}
 <section class="mini-market">
   <div class="mini-grid">
 
-    <div class="mini-card" onclick="openMarketFromCoin('ALP')">
-      <span class="mini-title">ALP</span>
+    <div class="mini-card" onclick="openMarketFromCoin('BTC')">
+      <span class="mini-title">BTC</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('VEC')">
-      <span class="mini-title">VEC</span>
+    <div class="mini-card" onclick="openMarketFromCoin('ETH')">
+      <span class="mini-title">ETH</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('ORB')">
-      <span class="mini-title">ORB</span>
+    <div class="mini-card" onclick="openMarketFromCoin('BNB')">
+      <span class="mini-title">BNB</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('NVA')">
-      <span class="mini-title">NVA</span>
+    <div class="mini-card" onclick="openMarketFromCoin('SOL')">
+      <span class="mini-title">SOL</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('PLS')">
-      <span class="mini-title">PLS</span>
+    <div class="mini-card" onclick="openMarketFromCoin('XRP')">
+      <span class="mini-title">XRP</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('ZYN')">
-      <span class="mini-title">ZYN</span>
+    <div class="mini-card" onclick="openMarketFromCoin('DOGE')">
+      <span class="mini-title">DOGE</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('QNT')">
-      <span class="mini-title">QNT</span>
+    <div class="mini-card" onclick="openMarketFromCoin('ADA')">
+      <span class="mini-title">ADA</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('FLX')">
-      <span class="mini-title">FLX</span>
+    <div class="mini-card" onclick="openMarketFromCoin('TRX')">
+      <span class="mini-title">TRX</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('CRX')">
-      <span class="mini-title">CRX</span>
+    <div class="mini-card" onclick="openMarketFromCoin('MATIC')">
+      <span class="mini-title">MATIC</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('AXN')">
-      <span class="mini-title">AXN</span>
+    <div class="mini-card" onclick="openMarketFromCoin('LTC')">
+      <span class="mini-title">LTC</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('LUM')">
-      <span class="mini-title">LUM</span>
+    <div class="mini-card" onclick="openMarketFromCoin('AVAX')">
+      <span class="mini-title">AVAX</span>
       <canvas class="miniChart"></canvas>
     </div>
 
-    <div class="mini-card" onclick="openMarketFromCoin('PRM')">
-      <span class="mini-title">PRM</span>
+    <div class="mini-card" onclick="openMarketFromCoin('LINK')">
+      <span class="mini-title">LINK</span>
       <canvas class="miniChart"></canvas>
     </div>
 
@@ -1126,6 +1131,23 @@ function openMarketFromCoin(symbol){
     }
   });
 }
+
+// Live price auto-refresh every 60s
+setInterval(() => {
+  fetch('/api/prices')
+    .then(r => r.json())
+    .then(data => {
+      for (const [sym, info] of Object.entries(data)) {
+        const el = document.getElementById('price-' + sym);
+        if (el && info.inr) {
+          const ch = info.change_24h || 0;
+          el.textContent = '\u20b9' + info.inr.toLocaleString('en-IN') +
+            ' (' + (ch >= 0 ? '+' : '') + ch + '%)';
+          el.className = ch >= 0 ? 'up' : 'down';
+        }
+      }
+    }).catch(() => {});
+}, 60000);
 
 
 </script>

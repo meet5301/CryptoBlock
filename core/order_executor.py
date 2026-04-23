@@ -17,7 +17,8 @@ class OrderExecutor:
         def _loop():
             while self._running:
                 try:
-                    self._process(get_db(), price_engine, record_tx, notify)
+                    import price_engine as pe
+                    self._process(get_db(), pe, record_tx, notify)
                 except Exception:
                     pass
                 time.sleep(5)
@@ -25,7 +26,9 @@ class OrderExecutor:
         threading.Thread(target=_loop, daemon=True).start()
 
     def _process(self, db, price_engine, record_tx, notify):
-        prices = price_engine.get_all_prices()
+        all_prices = price_engine.get_all_prices()
+        prices = {k: v.get("inr", 0) if isinstance(v, dict) else v
+                  for k, v in all_prices.items()}
         pending = list(db.orders.find({"status": "PENDING"}))
 
         for order in pending:

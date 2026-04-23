@@ -1,60 +1,260 @@
 <style>
+/* TICKER */
+.ticker-wrap{
+  position:fixed;top:0;left:0;width:100%;height:32px;
+  background:rgba(5,15,35,.98);border-bottom:1px solid rgba(250,204,21,.2);
+  overflow:hidden;z-index:200;display:flex;align-items:center;
+}
+.ticker-track{
+  display:flex;gap:0;white-space:nowrap;
+  animation:tickerScroll 40s linear infinite;
+}
+.ticker-track:hover{animation-play-state:paused}
+@keyframes tickerScroll{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+.ticker-item{
+  padding:0 22px;font-size:12px;font-weight:700;
+  border-right:1px solid rgba(255,255,255,.08);
+}
+.ticker-item .sym{color:#94a3b8;margin-right:5px}
+.ticker-item .prc{color:white}
+.ticker-item .chg{margin-left:5px;font-size:11px}
+.chg-up{color:#22c55e}
+.chg-dn{color:#ef4444}
+
+/* NAV */
 .nav{
-  position:fixed;top:0;left:0;width:100%;
-  padding:18px 6%;
-  display:flex;align-items:center;gap:6px;
-  background:rgba(10,31,68,.95);
+  position:fixed;top:32px;left:0;width:100%;
+  padding:14px 4%;
+  display:flex;align-items:center;gap:4px;
+  background:rgba(10,31,68,.97);
   backdrop-filter:blur(12px);
   z-index:100;
-  border-bottom:1px solid rgba(255,255,255,.08);
+  border-bottom:1px solid rgba(255,255,255,.07);
 }
-.logo{font-size:24px;font-weight:900;color:#facc15;letter-spacing:1px;margin-right:18px}
+.logo{font-size:22px;font-weight:900;color:#facc15;letter-spacing:1px;margin-right:14px;white-space:nowrap}
 .nav a{
-  color:rgba(255,255,255,.75);font-weight:600;font-size:13px;
-  text-decoration:none;padding:7px 12px;border-radius:8px;transition:.2s;white-space:nowrap;
+  color:rgba(255,255,255,.7);font-weight:600;font-size:13px;
+  text-decoration:none;padding:6px 10px;border-radius:8px;transition:.2s;white-space:nowrap;
 }
 .nav a:hover{color:#facc15;background:rgba(250,204,21,.1)}
-.nav .nav-right{margin-left:auto;display:flex;align-items:center;gap:10px}
+.nav-div{width:1px;height:18px;background:rgba(255,255,255,.12);margin:0 4px;flex-shrink:0}
+.nav-right{margin-left:auto;display:flex;align-items:center;gap:10px;flex-shrink:0}
 .btn-nav{
-  padding:9px 22px;border-radius:999px;
+  padding:8px 20px;border-radius:999px;
   background:#facc15;border:none;
   font-weight:800;color:#0a1f44;cursor:pointer;transition:.3s;font-size:13px;
 }
-.btn-nav:hover{transform:translateY(-2px);box-shadow:0 0 18px rgba(250,204,21,.45)}
-.nav-divider{width:1px;height:20px;background:rgba(255,255,255,.15);margin:0 6px}
+.btn-nav:hover{transform:translateY(-2px);box-shadow:0 0 16px rgba(250,204,21,.4)}
+
+/* NOTIFICATION BELL */
+.notif-wrap{position:relative;cursor:pointer}
+.notif-bell{
+  width:36px;height:36px;border-radius:50%;
+  background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);
+  display:flex;align-items:center;justify-content:center;font-size:16px;
+  transition:.2s;
+}
+.notif-bell:hover{background:rgba(250,204,21,.15);border-color:rgba(250,204,21,.4)}
+.notif-badge{
+  position:absolute;top:-4px;right:-4px;
+  min-width:18px;height:18px;border-radius:999px;
+  background:#ef4444;color:white;font-size:10px;font-weight:900;
+  display:none;align-items:center;justify-content:center;padding:0 4px;
+}
+
+/* NOTIF DROPDOWN */
+.notif-dropdown{
+  position:absolute;top:44px;right:0;width:320px;
+  background:#0d2347;border:1px solid rgba(255,255,255,.12);
+  border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,.5);
+  display:none;z-index:999;overflow:hidden;
+}
+.notif-header{
+  padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.08);
+  display:flex;justify-content:space-between;align-items:center;
+}
+.notif-header span{font-size:13px;font-weight:800;color:#facc15}
+.notif-header button{
+  font-size:11px;color:#64748b;background:none;border:none;cursor:pointer;
+}
+.notif-header button:hover{color:#facc15}
+.notif-item{
+  padding:12px 16px;border-bottom:1px solid rgba(255,255,255,.05);
+  font-size:12px;line-height:1.5;
+}
+.notif-item.unread{background:rgba(250,204,21,.04)}
+.notif-item .ntype{
+  display:inline-block;padding:2px 8px;border-radius:999px;
+  font-size:10px;font-weight:800;margin-bottom:4px;
+}
+.ntype-TRADE{background:rgba(34,197,94,.2);color:#86efac}
+.ntype-ALERT{background:rgba(239,68,68,.2);color:#fca5a5}
+.ntype-SIP{background:rgba(59,130,246,.2);color:#93c5fd}
+.ntype-SYSTEM{background:rgba(250,204,21,.2);color:#fde68a}
+.notif-empty{padding:24px;text-align:center;color:#64748b;font-size:13px}
 </style>
 
+<!-- TICKER TAPE -->
+<div class="ticker-wrap">
+  <div class="ticker-track" id="tickerTrack">
+    {% set coins = ['BTC','ETH','BNB','SOL','XRP','DOGE','ADA','TRX','MATIC','LTC','AVAX','LINK'] %}
+    {% for c in coins %}
+    <div class="ticker-item" id="tick-{{ c }}">
+      <span class="sym">{{ c }}</span>
+      <span class="prc" id="tp-{{ c }}">₹—</span>
+      <span class="chg" id="tc-{{ c }}"></span>
+    </div>
+    {% endfor %}
+    <!-- duplicate for seamless loop -->
+    {% for c in coins %}
+    <div class="ticker-item">
+      <span class="sym">{{ c }}</span>
+      <span class="prc" id="tp2-{{ c }}">₹—</span>
+      <span class="chg" id="tc2-{{ c }}"></span>
+    </div>
+    {% endfor %}
+  </div>
+</div>
+
+<!-- NAVBAR -->
 <nav class="nav">
   <div class="logo">CRYPTOFUSION</div>
 
   <a href="{{ url_for('home') }}">Home</a>
-  <a href="{{ url_for('home') }}#market">Market</a>
+  <a href="{{ url_for('dashboard') }}">Dashboard</a>
   <a href="{{ url_for('portfolio') }}">Portfolio</a>
   <a href="{{ url_for('sip_page') }}">SIP</a>
+  <a href="{{ url_for('orders.orders_page') }}">Orders</a>
 
-  <div class="nav-divider"></div>
+  <div class="nav-div"></div>
 
-  <a href="{{ url_for('blockchain.view_chain') }}">⛓ Blockchain</a>
-  <a href="{{ url_for('ai.monitor') }}">🤖 AI Monitor</a>
+  <a href="{{ url_for('blockchain.view_chain') }}">⛓ Chain</a>
+  <a href="{{ url_for('ai.monitor') }}">🤖 AI</a>
+  <a href="{{ url_for('leaderboard.leaderboard') }}">🏆 Board</a>
 
-  <div class="nav-divider"></div>
+  <div class="nav-div"></div>
 
   <a href="{{ url_for('wallet_page') }}">Wallet</a>
   <a href="{{ url_for('profile') }}">Profile</a>
 
   <div class="nav-right">
     {% if user %}
-      <span style="color:#94a3b8;font-size:13px">{{ user }}</span>
-      <button class="btn-nav" onclick="location.href='{{ url_for('auth.logout') }}'">Logout</button>
+    <!-- NOTIFICATION BELL -->
+    <div class="notif-wrap" onclick="toggleNotif()">
+      <div class="notif-bell">🔔</div>
+      <div class="notif-badge" id="notifBadge"></div>
+      <div class="notif-dropdown" id="notifDropdown">
+        <div class="notif-header">
+          <span>Notifications</span>
+          <button onclick="markRead(event)">Mark all read</button>
+        </div>
+        <div id="notifList"><div class="notif-empty">Loading…</div></div>
+      </div>
+    </div>
+    <span style="color:#64748b;font-size:12px">{{ user.split('@')[0] }}</span>
+    <button class="btn-nav" onclick="location.href='{{ url_for('auth.logout') }}'">Logout</button>
     {% else %}
-      <button class="btn-nav" onclick="location.href='{{ url_for('auth.login') }}'">Login</button>
+    <button class="btn-nav" onclick="location.href='{{ url_for('auth.login') }}'">Login</button>
     {% endif %}
   </div>
 </nav>
 
 <script>
 const isLoggedIn = {{ 'true' if user else 'false' }};
-function secureNav(url){
-  window.location.href = isLoggedIn ? url : "{{ url_for('auth.login') }}";
+
+// ── TICKER ──────────────────────────────────────────────────────
+function updateTicker(data) {
+  for (const [coin, info] of Object.entries(data)) {
+    const price = info.price.toFixed(2);
+    const chg = info.change_24h;
+    const cls = chg >= 0 ? 'chg-up' : 'chg-dn';
+    const sign = chg >= 0 ? '+' : '';
+    ['tp-','tp2-'].forEach(p => {
+      const el = document.getElementById(p + coin);
+      if (el) el.textContent = '₹' + price;
+    });
+    ['tc-','tc2-'].forEach(p => {
+      const el = document.getElementById(p + coin);
+      if (el) { el.textContent = sign + chg + '%'; el.className = 'chg ' + cls; }
+    });
+  }
+}
+
+if (isLoggedIn) {
+  const es = new EventSource('/api/prices/stream');
+  es.onmessage = e => { try { updateTicker(JSON.parse(e.data)); } catch(_){} };
+} else {
+  fetch('/api/prices').then(r=>r.json()).then(updateTicker).catch(()=>{});
+}
+
+// ── NOTIFICATIONS ────────────────────────────────────────────────
+function toggleNotif() {
+  const dd = document.getElementById('notifDropdown');
+  if (!dd) return;
+  const open = dd.style.display === 'block';
+  dd.style.display = open ? 'none' : 'block';
+  if (!open) loadNotifs();
+}
+
+document.addEventListener('click', e => {
+  const wrap = document.querySelector('.notif-wrap');
+  if (wrap && !wrap.contains(e.target)) {
+    const dd = document.getElementById('notifDropdown');
+    if (dd) dd.style.display = 'none';
+  }
+});
+
+function loadNotifs() {
+  fetch('/api/notifications/')
+    .then(r => r.json())
+    .then(d => {
+      const list = document.getElementById('notifList');
+      const badge = document.getElementById('notifBadge');
+      if (!list) return;
+      if (d.unread > 0) {
+        badge.style.display = 'flex';
+        badge.textContent = d.unread > 9 ? '9+' : d.unread;
+      } else {
+        badge.style.display = 'none';
+      }
+      if (!d.notifications || d.notifications.length === 0) {
+        list.innerHTML = '<div class="notif-empty">No notifications</div>';
+        return;
+      }
+      list.innerHTML = d.notifications.map(n => `
+        <div class="notif-item ${n.read ? '' : 'unread'}">
+          <div><span class="ntype ntype-${n.type}">${n.type}</span></div>
+          <div>${n.message}</div>
+          <div style="font-size:11px;color:#64748b;margin-top:3px">${n.created_at}</div>
+        </div>`).join('');
+    }).catch(() => {});
+}
+
+function markRead(e) {
+  e.stopPropagation();
+  fetch('/api/notifications/read', {method: 'POST'})
+    .then(() => {
+      const badge = document.getElementById('notifBadge');
+      if (badge) badge.style.display = 'none';
+      loadNotifs();
+    });
+}
+
+// Poll unread count every 15s
+if (isLoggedIn) {
+  setInterval(() => {
+    fetch('/api/notifications/unread-count')
+      .then(r => r.json())
+      .then(d => {
+        const badge = document.getElementById('notifBadge');
+        if (!badge) return;
+        if (d.count > 0) {
+          badge.style.display = 'flex';
+          badge.textContent = d.count > 9 ? '9+' : d.count;
+        } else {
+          badge.style.display = 'none';
+        }
+      }).catch(() => {});
+  }, 15000);
 }
 </script>

@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CryptoFusion | Leaderboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:"Segoe UI",Inter,system-ui;color:white;padding-top:80px;
+  background:linear-gradient(rgba(255,255,255,0.05) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px),#0a1f44;
+  background-size:42px 42px;animation:gridMove 20s linear infinite;
+}
+@keyframes gridMove{from{background-position:0 0,0 0}to{background-position:80px 80px,80px 80px}}
+.page{max-width:1000px;margin:auto;padding:32px 4%;animation:fadeIn .4s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+h1{font-size:28px;font-weight:900;color:#facc15;margin-bottom:6px}
+.sub{color:#64748b;font-size:13px;margin-bottom:28px}
+
+.top3{display:grid;grid-template-columns:1fr 1.2fr 1fr;gap:16px;margin-bottom:32px;align-items:end}
+.podium{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);
+  border-radius:16px;padding:24px;text-align:center}
+.podium.gold{border-color:rgba(250,204,21,.5);background:rgba(250,204,21,.08)}
+.podium.silver{border-color:rgba(148,163,184,.4);background:rgba(148,163,184,.06)}
+.podium.bronze{border-color:rgba(180,120,60,.4);background:rgba(180,120,60,.06)}
+.medal{font-size:36px;margin-bottom:8px}
+.podium .name{font-size:16px;font-weight:800;color:white;margin-bottom:4px}
+.podium .val{font-size:22px;font-weight:900;color:#facc15}
+.podium .trades{font-size:12px;color:#64748b;margin-top:4px}
+
+.box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:16px;padding:24px}
+.box h3{font-size:16px;font-weight:800;color:#facc15;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+th{padding:10px 16px;text-align:left;font-size:11px;color:#64748b;
+  text-transform:uppercase;letter-spacing:.4px;border-bottom:1px solid rgba(255,255,255,.08)}
+td{padding:13px 16px;font-size:13px;border-bottom:1px solid rgba(255,255,255,.05)}
+tbody tr:hover{background:rgba(255,255,255,.03)}
+tbody tr.me{background:rgba(250,204,21,.08);border-left:3px solid #facc15}
+
+.rank-badge{display:inline-flex;align-items:center;justify-content:center;
+  width:28px;height:28px;border-radius:50%;font-weight:900;font-size:13px}
+.rank-1{background:rgba(250,204,21,.3);color:#facc15}
+.rank-2{background:rgba(148,163,184,.2);color:#cbd5e1}
+.rank-3{background:rgba(180,120,60,.2);color:#d97706}
+.rank-n{background:rgba(255,255,255,.08);color:#64748b}
+
+.risk-low{color:#22c55e;font-weight:700}
+.risk-med{color:#f59e0b;font-weight:700}
+.risk-high{color:#ef4444;font-weight:700}
+
+.refresh-info{font-size:12px;color:#64748b;text-align:right;margin-bottom:10px}
+</style>
+</head>
+<body>
+{% include "navbar.html" %}
+<div class="page">
+  <h1>🏆 Leaderboard</h1>
+  <p class="sub">Ranked by total portfolio value (cash + holdings at live price)</p>
+
+  <!-- TOP 3 PODIUM -->
+  {% if rows|length >= 3 %}
+  <div class="top3">
+    <!-- SILVER (2nd) -->
+    <div class="podium silver">
+      <div class="medal">🥈</div>
+      <div class="name">{{ rows[1].name }}</div>
+      <div class="val">₹{{ "{:,.0f}".format(rows[1].portfolio_value) }}</div>
+      <div class="trades">{{ rows[1].trade_count }} trades</div>
+    </div>
+    <!-- GOLD (1st) -->
+    <div class="podium gold">
+      <div class="medal">🥇</div>
+      <div class="name">{{ rows[0].name }}</div>
+      <div class="val">₹{{ "{:,.0f}".format(rows[0].portfolio_value) }}</div>
+      <div class="trades">{{ rows[0].trade_count }} trades</div>
+    </div>
+    <!-- BRONZE (3rd) -->
+    <div class="podium bronze">
+      <div class="medal">🥉</div>
+      <div class="name">{{ rows[2].name }}</div>
+      <div class="val">₹{{ "{:,.0f}".format(rows[2].portfolio_value) }}</div>
+      <div class="trades">{{ rows[2].trade_count }} trades</div>
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- FULL TABLE -->
+  <div class="box">
+    <h3>All Rankings</h3>
+    <div class="refresh-info" id="refreshInfo">Auto-refreshes every 30s</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Rank</th><th>Name</th><th>Portfolio Value</th>
+          <th>Best Coin</th><th>Trades</th><th>Risk Score</th>
+        </tr>
+      </thead>
+      <tbody id="lbBody">
+        {% for r in rows %}
+        <tr class="{{ 'me' if r.email == current_user else '' }}">
+          <td>
+            <span class="rank-badge {{ 'rank-1' if r.rank==1 else 'rank-2' if r.rank==2 else 'rank-3' if r.rank==3 else 'rank-n' }}">
+              {{ r.rank }}
+            </span>
+          </td>
+          <td style="font-weight:700">
+            {{ r.name }}
+            {% if r.email == current_user %}
+            <span style="font-size:11px;color:#facc15;margin-left:6px">(You)</span>
+            {% endif %}
+          </td>
+          <td style="font-weight:800;color:#facc15">₹{{ "{:,.0f}".format(r.portfolio_value) }}</td>
+          <td>{{ r.best_coin }}</td>
+          <td>{{ r.trade_count }}</td>
+          <td class="{{ 'risk-low' if r.risk_score<=30 else 'risk-med' if r.risk_score<=60 else 'risk-high' }}">
+            {{ r.risk_score }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<script>
+let countdown = 30;
+const info = document.getElementById('refreshInfo');
+
+setInterval(() => {
+  countdown--;
+  if (info) info.textContent = `Auto-refreshes in ${countdown}s`;
+  if (countdown <= 0) {
+    countdown = 30;
+    fetch('/leaderboard/api')
+      .then(r => r.json())
+      .then(d => {
+        const body = document.getElementById('lbBody');
+        if (!body || !d.rows) return;
+        body.innerHTML = d.rows.map(r => `
+          <tr class="${r.email === '{{ current_user }}' ? 'me' : ''}">
+            <td><span class="rank-badge ${r.rank<=3?'rank-'+r.rank:'rank-n'}">${r.rank}</span></td>
+            <td style="font-weight:700">${r.name}${r.email==='{{ current_user }}'?'<span style="font-size:11px;color:#facc15;margin-left:6px">(You)</span>':''}</td>
+            <td style="font-weight:800;color:#facc15">₹${r.portfolio_value.toLocaleString('en-IN',{maximumFractionDigits:0})}</td>
+            <td>${r.best_coin}</td>
+            <td>${r.trade_count}</td>
+            <td class="${r.risk_score<=30?'risk-low':r.risk_score<=60?'risk-med':'risk-high'}">${r.risk_score}</td>
+          </tr>`).join('');
+      });
+  }
+}, 1000);
+</script>
+</body>
+</html>

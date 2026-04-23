@@ -93,8 +93,8 @@ h1,h3{color:#facc15;font-weight:900}
 <div class="card">
   <div class="form">
     <select id="coin">
-      {% for c,n in coins.items() %}
-        <option value="{{ c }}">{{ n }} ({{ c }})</option>
+      {% for symbol, info in coins.items() %}
+        <option value="{{ symbol }}">{{ info.name }} ({{ symbol }})</option>
       {% endfor %}
     </select>
 
