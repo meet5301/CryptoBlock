@@ -10,7 +10,6 @@ COINGECKO_IDS = {
     "LTC": "litecoin", "AVAX": "avalanche-2", "LINK": "chainlink"
 }
 
-# Fallback prices (USD) in case API is down
 _FALLBACK_USD = {
     "BTC": 97000, "ETH": 3200, "BNB": 580, "SOL": 145,
     "XRP": 0.52, "DOGE": 0.12, "ADA": 0.38, "TRX": 0.11,
@@ -21,6 +20,12 @@ USD_TO_INR = 83.5
 
 _cache = {}
 _history = {s: deque(maxlen=30) for s in COINGECKO_IDS}
+_socketio = None  # injected by app.py after SocketIO init
+
+
+def set_socketio(sio):
+    global _socketio
+    _socketio = sio
 
 
 def _init_fallback():
@@ -35,21 +40,16 @@ def fetch_prices():
     try:
         r = requests.get(
             "https://api.coingecko.com/api/v3/simple/price",
-            params={
-                "ids": ids,
-                "vs_currencies": "usd",
-                "include_24hr_change": "true"
-            },
+            params={"ids": ids, "vs_currencies": "usd", "include_24hr_change": "true"},
             timeout=10,
             headers={"Accept": "application/json"}
         )
         data = r.json()
-
         if not isinstance(data, dict):
-            print(f"[PriceEngine] Unexpected response: {data}")
             return
 
         updated = 0
+        ts = int(time.time() * 1000)
         for symbol, cg_id in COINGECKO_IDS.items():
             if cg_id in data and "usd" in data[cg_id]:
                 usd_price = data[cg_id]["usd"]
@@ -58,6 +58,18 @@ def fetch_prices():
                 _cache[symbol] = {"inr": inr_price, "change_24h": change}
                 _history[symbol].append(inr_price)
                 updated += 1
+
+                # Emit SocketIO price_tick if socketio is available
+                if _socketio:
+                    try:
+                        _socketio.emit("price_tick", {
+                            "symbol": symbol,
+                            "price": inr_price,
+                            "change_24h": change,
+                            "timestamp": ts,
+                        }, room=symbol)
+                    except Exception:
+                        pass
 
         print(f"[PriceEngine] Updated {updated} prices")
 
@@ -77,7 +89,6 @@ def get_history(symbol):
     return list(_history.get(symbol, []))
 
 
-# For order_executor compatibility (it calls price_engine.get_all_prices())
 def get_snapshot():
     return _cache
 

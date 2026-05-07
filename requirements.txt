@@ -1,7 +1,9 @@
 flask
+flask-socketio
 pymongo
 werkzeug
 scikit-learn
 numpy
 python-dotenv
 requests>=2.28.0
+redis

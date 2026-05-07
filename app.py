@@ -3,12 +3,13 @@ import time
 from datetime import datetime
 
 from bson import ObjectId
-from flask import Flask, Response, jsonify, redirect, render_template, request, session, url_for
+from flask import Flask, jsonify, redirect, render_template, request, session, url_for
+from flask_socketio import SocketIO, join_room, emit
 
 from config import SECRET_KEY
 from core.blockchain_instance import blockchain
 from core.mempool import mempool
-from price_engine import start as start_price_engine, get_price, get_all_prices, get_history
+from price_engine import start as start_price_engine, get_price, get_all_prices, get_history, set_socketio
 from database.mongo import get_db
 
 from api.routes.auth import auth_bp
@@ -20,9 +21,11 @@ from api.routes.admin import admin_bp
 from api.routes.orders import orders_bp
 from api.routes.leaderboard import leaderboard_bp
 from api.routes.notifications import notifications_bp
+from api.routes.charts import charts_bp
 
 app = Flask(__name__)
 app.secret_key = SECRET_KEY
+socketio = SocketIO(app, cors_allowed_origins="*", async_mode="threading")
 
 app.register_blueprint(auth_bp)
 app.register_blueprint(blockchain_bp, url_prefix="/blockchain")
@@ -33,6 +36,7 @@ app.register_blueprint(admin_bp, url_prefix="/admin")
 app.register_blueprint(orders_bp, url_prefix="/orders")
 app.register_blueprint(leaderboard_bp, url_prefix="/leaderboard")
 app.register_blueprint(notifications_bp)
+app.register_blueprint(charts_bp, url_prefix="/api/charts")
 
 COINS = {
     "BTC":  {"name": "Bitcoin",   "coingecko_id": "bitcoin"},
@@ -77,6 +81,44 @@ def _notify(db, email, message, ntype="TRADE"):
         "user_email": email, "message": message,
         "type": ntype, "read": False, "created_at": datetime.now(),
     })
+
+
+# ─── SOCKETIO EVENTS ──────────────────────────────────────────────────────────
+@socketio.on("connect")
+def on_connect():
+    pass
+
+
+@socketio.on("subscribe")
+def on_subscribe(data):
+    symbol = data.get("symbol", "").upper()
+    if symbol:
+        join_room(symbol)
+        price_data = get_all_prices().get(symbol, {})
+        emit("price_tick", {
+            "symbol": symbol,
+            "price": price_data.get("inr", 0),
+            "change_24h": price_data.get("change_24h", 0),
+            "timestamp": int(time.time() * 1000),
+        })
+
+
+def _live_tick_emitter():
+    """Emits price ticks every 3 seconds to all coin rooms."""
+    while True:
+        time.sleep(3)
+        try:
+            prices = get_all_prices()
+            ts = int(time.time() * 1000)
+            for symbol, info in prices.items():
+                socketio.emit("price_tick", {
+                    "symbol": symbol,
+                    "price": info.get("inr", 0),
+                    "change_24h": info.get("change_24h", 0),
+                    "timestamp": ts,
+                }, room=symbol)
+        except Exception:
+            pass
 
 
 # ─── PRICE ENDPOINTS ──────────────────────────────────────────────────────────
@@ -489,6 +531,7 @@ def _sip_executor():
 # ─── ENTRY ────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     start_price_engine()
+    set_socketio(socketio)
 
     from core.order_executor import order_executor
     import price_engine as _pe_module
@@ -496,5 +539,6 @@ if __name__ == "__main__":
 
     threading.Thread(target=_stoploss_watcher, daemon=True).start()
     threading.Thread(target=_sip_executor, daemon=True).start()
+    threading.Thread(target=_live_tick_emitter, daemon=True).start()
 
-    app.run(debug=True, threaded=True)
+    socketio.run(app, debug=True, use_reloader=False)
