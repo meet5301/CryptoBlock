@@ -318,7 +318,7 @@ def api_trade():
     data = request.json or {}
     coin = data.get("coin")
     action = data.get("action")
-    qty = int(data.get("qty", 1))
+    qty = float(data.get("qty", 1))
     stoploss = float(data.get("stoploss", 0))
     user = db.users.find_one({"email": session["user"]})
     sender_addr = user["wallet"].get("wallet_address", "")
@@ -330,8 +330,20 @@ def api_trade():
         cost = price * qty
         if user["wallet"]["cash"] < cost:
             return jsonify({"error": "Insufficient balance"}), 400
+        
+        # Calculate weighted average price
+        current_qty = user["wallet"].get("coins", {}).get(coin, 0)
+        current_avg = user["wallet"].get("avg_price", {}).get(coin, price)
+        
+        if current_qty > 0:
+            # Weighted average: (old_qty * old_avg + new_qty * new_price) / (old_qty + new_qty)
+            new_avg = ((current_qty * current_avg) + (qty * price)) / (current_qty + qty)
+        else:
+            new_avg = price
+        
         db.users.update_one({"email": session["user"]},
-                            {"$inc": {"wallet.cash": -cost, f"wallet.coins.{coin}": qty}})
+                            {"$inc": {"wallet.cash": -cost, f"wallet.coins.{coin}": qty},
+                             "$set": {f"wallet.avg_price.{coin}": round(new_avg, 2)}})
         trade_id = db.trades.insert_one({
             "email": session["user"], "coin": coin, "buy_price": price,
             "qty": qty, "stoploss": stoploss, "status": "OPEN", "created_at": datetime.now(),
@@ -351,9 +363,20 @@ def api_trade():
     if not sell_price:
         return jsonify({"error": "Price unavailable"}), 503
     pnl = (sell_price - trade["buy_price"]) * trade["qty"]
+    
+    # Update wallet and remove coins
+    user = db.users.find_one({"email": session["user"]})
+    current_qty = user["wallet"].get("coins", {}).get(coin, 0)
+    
     db.users.update_one({"email": session["user"]},
                         {"$inc": {f"wallet.coins.{coin}": -trade["qty"],
                                   "wallet.cash": sell_price * trade["qty"]}})
+    
+    # If no coins left, remove avg_price entry
+    if current_qty - trade["qty"] <= 0:
+        db.users.update_one({"email": session["user"]},
+                            {"$unset": {f"wallet.avg_price.{coin}": ""}})
+    
     db.trades.update_one({"_id": trade["_id"]},
                          {"$set": {"status": "CLOSED", "sell_price": sell_price, "closed_at": datetime.now()}})
     db.profit_loss.update_one({"trade_id": trade["_id"]},
@@ -541,4 +564,4 @@ if __name__ == "__main__":
     threading.Thread(target=_sip_executor, daemon=True).start()
     threading.Thread(target=_live_tick_emitter, daemon=True).start()
 
-    socketio.run(app, debug=True, use_reloader=False)
+    socketio.run(app, debug=True, use_reloader=False, allow_unsafe_werkzeug=True)

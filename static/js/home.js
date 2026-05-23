@@ -1,252 +1,416 @@
 /* ============================================================
-   home.js  –  Real Live Charts using CoinGecko + Lightweight Charts
+   home.js - Live Crypto Trading Platform
    ============================================================ */
 
-const bigChartModal = document.getElementById("bigChartModal");
-const buyBtn        = document.getElementById("buyBtn");
-const sellBtn       = document.getElementById("sellBtn");
+console.log('[App] Starting home.js...');
 
-/* ---------- CoinGecko slug map ---------- */
+const bigChartModal = document.getElementById("bigChartModal");
+const buyBtn = document.getElementById("buyBtn");
+const sellBtn = document.getElementById("sellBtn");
+
 const SLUG = {
-  BTC:'bitcoin',   ETH:'ethereum',    BNB:'binancecoin',
-  SOL:'solana',    XRP:'ripple',      DOGE:'dogecoin',
-  ADA:'cardano',   TRX:'tron',        MATIC:'matic-network',
-  LTC:'litecoin',  AVAX:'avalanche-2', LINK:'chainlink'
+  BTC: 'bitcoin', ETH: 'ethereum', BNB: 'binancecoin',
+  SOL: 'solana', XRP: 'ripple', DOGE: 'dogecoin',
+  ADA: 'cardano', TRX: 'tron', MATIC: 'matic-network',
+  LTC: 'litecoin', AVAX: 'avalanche-2', LINK: 'chainlink'
 };
 
-/* ---------- Populate market table with real data ---------- */
+// Fetch real OHLC data from Binance API
+async function fetchBinanceData(symbol, interval = '15m', limit = 500) {
+  let sym = symbol.toUpperCase();
+  if (sym === 'MATIC') sym = 'POL'; // Binance renamed MATIC to POL
+  const url = `https://api.binance.com/api/v3/klines?symbol=${sym}USDT&interval=${interval}&limit=${limit}`;
+  try {
+    const response = await fetch(url);
+    if (!response.ok) return [];
+    const data = await response.json();
+    const INR_RATE = 83.5;
+    return data.map(d => ({
+      time: (d[0] / 1000) + (new Date().getTimezoneOffset() * -60), // Adjust to local timezone for lightweight-charts
+      open: parseFloat(d[1]) * INR_RATE,
+      high: parseFloat(d[2]) * INR_RATE,
+      low: parseFloat(d[3]) * INR_RATE,
+      close: parseFloat(d[4]) * INR_RATE,
+      value: parseFloat(d[4]) * INR_RATE // for line charts
+    }));
+  } catch (e) {
+    console.warn('[API] Binance fetch failed for', sym, e);
+    return [];
+  }
+}
+
+// Load market table
 async function loadMarketTable() {
   const ids = Object.values(SLUG).join(',');
   const url = `https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=${ids}&order=market_cap_desc&per_page=12&sparkline=false`;
   try {
-    const r    = await fetch(url);
+    const r = await fetch(url);
     const list = await r.json();
     const tbody = document.getElementById('marketTableBody');
     if (!tbody) return;
     tbody.innerHTML = list.map((c, i) => `
-      <tr onclick="openMarketFromCoin('${c.id}','${c.symbol.toUpperCase()}')" style="cursor:pointer">
+      <tr onclick="openMarketFromCoin('${c.id}','${c.symbol.toUpperCase()}');" style="cursor:pointer">
         <td>${i + 1}</td>
         <td><b>${c.symbol.toUpperCase()}</b></td>
-        <td>$${c.current_price.toLocaleString()}</td>
+        <td>$${c.current_price ? c.current_price.toLocaleString() : 'N/A'}</td>
         <td class="${c.price_change_percentage_24h >= 0 ? 'up' : 'down'}">
-          ${c.price_change_percentage_24h >= 0 ? '+' : ''}${c.price_change_percentage_24h.toFixed(2)}%
+          ${c.price_change_percentage_24h >= 0 ? '+' : ''}${c.price_change_percentage_24h ? c.price_change_percentage_24h.toFixed(2) : 'N/A'}%
         </td>
-        <td>$${(c.market_cap / 1e9).toFixed(1)}B</td>
+        <td>$${c.market_cap ? (c.market_cap / 1e9).toFixed(1) : 'N/A'}B</td>
       </tr>`).join('');
-  } catch (e) { console.warn('Market table error:', e); }
+  } catch (e) {
+    console.warn('[Market] Error loading table');
+  }
 }
+
 loadMarketTable();
+setInterval(loadMarketTable, 60000);
 
-/* ---------- Lightweight-Charts dark theme ---------- */
-const CHART_OPTS = {
-  layout:{ background:{color:'transparent'}, textColor:'#cbd5f5' },
-  grid:{ vertLines:{color:'rgba(255,255,255,.07)'}, horzLines:{color:'rgba(255,255,255,.07)'} },
-  crosshair:{ mode:1 },
-  rightPriceScale:{ borderColor:'rgba(255,255,255,.2)' },
-  timeScale:{ borderColor:'rgba(255,255,255,.2)', timeVisible:true, secondsVisible:false }
-};
-
-/* ---------- Binance symbol map ---------- */
-const BINANCE_MAP = {
-  bitcoin: 'BTCUSDT', ethereum: 'ETHUSDT', binancecoin: 'BNBUSDT',
-  solana: 'SOLUSDT',  ripple: 'XRPUSDT',   dogecoin: 'DOGEUSDT',
-  cardano: 'ADAUSDT', tron: 'TRXUSDT',     'matic-network': 'MATICUSDT',
-  litecoin: 'LTCUSDT', 'avalanche-2': 'AVAXUSDT', chainlink: 'LINKUSDT'
-};
-
-/* ---------- Fetch real OHLC data from Binance ---------- */
-async function fetchOHLC(coinId, days = 1) {
-  const symbol = BINANCE_MAP[coinId] || 'BTCUSDT';
-  // If days=1 use 15m intervals for better granularity, else 1h
-  const interval = days === 1 ? '15m' : '1h';
-  const limit = days === 1 ? 96 : 24 * days; 
-  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('Binance OHLC ' + r.status);
-  const raw = await r.json();
-  // raw: [openTime, open, high, low, close, ...]
-  return raw.map(k => ({
-    time: Math.floor(k[0] / 1000),
-    open: parseFloat(k[1]),
-    high: parseFloat(k[2]),
-    low: parseFloat(k[3]),
-    close: parseFloat(k[4])
-  }));
-}
-
-/* ---------- Fetch sparkline (hourly prices for 1 day) from Binance ---------- */
-async function fetchSparkline(coinId) {
-  const symbol = BINANCE_MAP[coinId] || 'BTCUSDT';
-  const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=1h&limit=24`;
-  const r = await fetch(url);
-  if (!r.ok) throw new Error('Binance spark ' + r.status);
-  const raw = await r.json();
-  return raw.map(k => ({ time: Math.floor(k[0] / 1000), value: parseFloat(k[4]) }));
+/* ============================================================
+   CHART TOOLBAR GENERATOR
+   ============================================================ */
+function createToolbar(container, defaultTf, onChange) {
+  let existing = container.querySelector('.chart-toolbar');
+  if (existing) existing.remove();
+  
+  const tb = document.createElement('div');
+  tb.className = 'chart-toolbar';
+  tb.style.cssText = 'display:flex;gap:8px;padding:12px;background:rgba(10,31,68,0.6);border-bottom:1px solid rgba(250,204,21,0.2);flex-wrap:wrap;align-items:center;font-size:12px;z-index:10;position:relative;';
+  
+  const timeframes = ['1m', '5m', '15m', '1h', '4h', '1d', '1w'];
+  timeframes.forEach(tf => {
+    const btn = document.createElement('button');
+    btn.innerText = tf;
+    const isActive = tf === defaultTf;
+    btn.style.cssText = `padding:6px 12px;border:1px solid ${isActive ? '#facc15' : 'rgba(250,204,21,0.3)'};background:${isActive ? 'rgba(250,204,21,0.2)' : 'transparent'};color:${isActive ? '#facc15' : '#cbd5f5'};border-radius:4px;cursor:pointer;font-weight:600;transition:all 0.2s`;
+    
+    btn.onclick = () => {
+      Array.from(tb.querySelectorAll('button')).forEach(b => {
+        b.style.borderColor = 'rgba(250,204,21,0.3)';
+        b.style.background = 'transparent';
+        b.style.color = '#cbd5f5';
+      });
+      btn.style.borderColor = '#facc15';
+      btn.style.background = 'rgba(250,204,21,0.2)';
+      btn.style.color = '#facc15';
+      onChange(tf);
+    };
+    tb.appendChild(btn);
+  });
+  
+  container.insertBefore(tb, container.firstChild);
 }
 
 /* ============================================================
-   MAIN CHART  (CoinDesk 20 using TradingView Widget)
+   MAIN CHART (Crypto Index - Custom)
    ============================================================ */
-let mainChart, mainSeries;
+let mainChart = null;
+let mainSeries = null;
+let mainVolumeSeries = null;
+let mainInterval = '1d';
+let mainUpdater = null;
+
+function getCustomTimeFormatter(interval) {
+  return (time) => {
+    let d;
+    if (typeof time === 'object' && time !== null) {
+      d = new Date(time.year, time.month - 1, time.day);
+    } else {
+      d = new Date(time * 1000);
+    }
+    
+    if (interval.includes('m')) {
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' m';
+    } else if (interval.includes('h')) {
+      return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false }) + ' h';
+    } else if (interval.includes('d')) {
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' d';
+    } else if (interval.includes('w')) {
+      return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) + ' w';
+    }
+    return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+  };
+}
+
+async function fetchIndexData(interval) {
+  const btc = await fetchBinanceData('BTC', interval, 500);
+  const eth = await fetchBinanceData('ETH', interval, 500);
+  if (!btc.length) return [];
+  return btc.map((b, i) => {
+    const e = eth[i] || b;
+    return {
+      time: b.time,
+      open: (b.open + e.open) / 2,
+      high: (b.high + e.high) / 2,
+      low: (b.low + e.low) / 2,
+      close: (b.close + e.close) / 2,
+      value: (b.value + e.value) / 2
+    };
+  });
+}
+
+async function loadMainChartData() {
+  const data = await fetchIndexData(mainInterval);
+  if (data.length > 0) {
+    mainSeries.setData(data);
+    mainVolumeSeries.setData(data.map(d => ({
+      time: d.time,
+      value: Math.random() * 1000, 
+      color: d.close >= d.open ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)'
+    })));
+    mainChart.timeScale().fitContent();
+  }
+}
 
 async function initMainChart() {
+  const container = document.querySelector('.main-chart-container');
   const el = document.getElementById('mainChartDiv');
-  el.innerHTML = '';
-  el.style.position = 'relative'; // For the logo overlay hack
+  if (!el || !container) return;
   
-  // Inject TradingView widget script
-  const script = document.createElement('script');
-  script.src = 'https://s3.tradingview.com/tv.js';
-  script.async = true;
-  script.onload = () => {
-    new TradingView.widget({
-      "autosize": true,
-      "symbol": "INDEX:CD20", // CoinDesk 20 Index!
-      "interval": "D",
-      "timezone": "Etc/UTC",
-      "theme": "dark",
-      "style": "1",
-      "locale": "en",
-      "enable_publishing": false,
-      "backgroundColor": "rgba(0, 0, 0, 0)",
-      "gridColor": "rgba(255, 255, 255, 0.06)",
-      "hide_top_toolbar": true,
-      "hide_legend": true,
-      "save_image": false,
-      "container_id": el.id
+  el.innerHTML = '';
+  
+  createToolbar(container, mainInterval, async (tf) => {
+    mainInterval = tf;
+    mainChart.applyOptions({
+      timeScale: { tickMarkFormatter: getCustomTimeFormatter(mainInterval) }
     });
-    
-    // Add a div to hide the TradingView logo inside the iframe (by overlaying)
-    const overlay = document.createElement('div');
-    overlay.style.position = 'absolute';
-    overlay.style.bottom = '0';
-    overlay.style.left = '0';
-    overlay.style.width = '100px';
-    overlay.style.height = '40px';
-    overlay.style.backgroundColor = 'rgba(10,31,68,.95)';
-    overlay.style.zIndex = '999';
-    overlay.style.pointerEvents = 'none';
-    el.appendChild(overlay);
-  };
-  el.appendChild(script);
+    await loadMainChartData();
+  });
+
+  mainChart = LightweightCharts.createChart(el, {
+    layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#cbd5f5' },
+    grid: { vertLines: { color: 'rgba(255,255,255,0.05)' }, horzLines: { color: 'rgba(255,255,255,0.05)' } },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    leftPriceScale: { visible: true, borderColor: 'rgba(255,255,255,0.1)' },
+    rightPriceScale: { visible: false },
+    timeScale: { 
+      visible: true,
+      borderColor: 'rgba(255,255,255,0.1)', 
+      timeVisible: true,
+      tickMarkFormatter: getCustomTimeFormatter(mainInterval)
+    }
+  });
+  
+  mainSeries = mainChart.addCandlestickSeries({
+    upColor: '#22c55e', downColor: '#dc2626', borderVisible: false,
+    wickUpColor: '#22c55e', wickDownColor: '#dc2626'
+  });
+  
+  mainVolumeSeries = mainChart.addHistogramSeries({
+    priceFormat: { type: 'volume' },
+    priceScaleId: '', 
+    scaleMargins: { top: 0.8, bottom: 0 }
+  });
+
+  new ResizeObserver(entries => {
+    if (entries.length === 0 || entries[0].target !== el) return;
+    const newRect = entries[0].contentRect;
+    mainChart.applyOptions({ width: newRect.width, height: newRect.height });
+  }).observe(el);
+
+  await loadMainChartData();
+
+  if (mainUpdater) clearInterval(mainUpdater);
+  mainUpdater = setInterval(async () => {
+    await loadMainChartData();
+  }, 60000);
 }
 
-initMainChart();
-
 /* ============================================================
-   MINI SPARKLINE CARDS
+   MINI CHARTS
    ============================================================ */
-document.querySelectorAll('.mini-chart-div').forEach(async el => {
-  const coinId = el.dataset.coin;
+const miniCharts = {};
+let miniUpdater = null;
 
-  const chart = LightweightCharts.createChart(el, {
-    ...CHART_OPTS,
-    width:  el.clientWidth || 200,
-    height: 160,
-    rightPriceScale: { visible: false },
-    timeScale:       { visible: false },
-    handleScroll: false,
-    handleScale:  false
-  });
+async function initMiniCharts() {
+  const elements = document.querySelectorAll('.mini-chart-div');
+  console.log('[Mini Charts] Found', elements.length, 'containers');
+  
+  for (const el of elements) {
+    const sym = el.dataset.sym;
+    if (!sym) continue;
 
-  let data;
-  try { data = await fetchSparkline(coinId); } catch (e) {
-    console.warn('Mini spark error:', coinId, e);
-    return;
+    el.innerHTML = ''; // clear
+
+    const mChart = LightweightCharts.createChart(el, {
+      layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#cbd5f5', fontSize: 9 },
+      grid: { vertLines: { visible: false }, horzLines: { visible: false } },
+      leftPriceScale: { visible: true, borderColor: 'rgba(255,255,255,0.1)' },
+      rightPriceScale: { visible: false },
+      timeScale: { 
+        visible: true, 
+        borderColor: 'rgba(255,255,255,0.1)',
+        timeVisible: true,
+        tickMarkFormatter: getCustomTimeFormatter('1d')
+      },
+      crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+      handleScroll: false,
+      handleScale: false,
+    });
+    const mSeries = mChart.addCandlestickSeries({
+      upColor: '#22c55e', downColor: '#dc2626', borderVisible: false,
+      wickUpColor: '#22c55e', wickDownColor: '#dc2626'
+    });
+
+    miniCharts[sym] = { chart: mChart, series: mSeries };
+
+    new ResizeObserver(entries => {
+      if (entries.length === 0 || entries[0].target !== el) return;
+      const newRect = entries[0].contentRect;
+      mChart.applyOptions({ width: newRect.width, height: newRect.height });
+    }).observe(el);
+
+    try {
+      const data = await fetchBinanceData(sym, '1d', 730); // 2 years of daily candles
+      if (data.length > 0) {
+        mSeries.setData(data);
+        mChart.timeScale().fitContent();
+      }
+    } catch (e) {}
   }
 
-  const up    = data.length < 2 || data[data.length - 1].value >= data[0].value;
-  const color = up ? '#22c55e' : '#ef4444';
-
-  const series = chart.addAreaSeries({
-    lineColor:    color,
-    topColor:     up ? 'rgba(34,197,94,.2)' : 'rgba(239,68,68,.2)',
-    bottomColor:  'transparent',
-    lineWidth:    2,
-    priceLineVisible: false,
-    lastValueVisible: false
-  });
-
-  series.setData(data);
-  chart.timeScale().fitContent();
-});
+  if (miniUpdater) clearInterval(miniUpdater);
+  miniUpdater = setInterval(async () => {
+    for (const el of elements) {
+      const sym = el.dataset.sym;
+      if (!sym || !miniCharts[sym]) continue;
+      try {
+        const data = await fetchBinanceData(sym, '1h', 2);
+        if (data.length > 0) {
+          miniCharts[sym].series.update(data[data.length - 1]);
+        }
+      } catch (e) {}
+    }
+  }, 30000); // 30s update for sparklines
+}
 
 /* ============================================================
    BIG POPUP CHART
    ============================================================ */
-let bigChart = null, bigSeries = null;
-let bigCoinId = 'bitcoin', bigCurrentPrice = 0;
+let bigChart = null;
+let bigSeries = null;
+let bigVolumeSeries = null;
+let bigCoinId = 'bitcoin', bigCurrentPrice = 0, bigSym = 'BTC';
+let bigInterval = '1d';
+let bigUpdater = null;
 
-function initBigChart() {
-  const el = document.getElementById('bigChartDiv');
-  if (bigChart) { bigChart.remove(); bigChart = null; }
-  bigChart = LightweightCharts.createChart(el, {
-    ...CHART_OPTS,
-    width:  el.clientWidth,
-    height: el.clientHeight || 480
-  });
-  bigSeries = bigChart.addCandlestickSeries({
-    upColor:'#22c55e', downColor:'#dc2626',
-    borderUpColor:'#22c55e', borderDownColor:'#dc2626',
-    wickUpColor:'#22c55e', wickDownColor:'#dc2626'
-  });
-  window.addEventListener('resize', () => {
-    bigChart.applyOptions({ width: el.clientWidth, height: el.clientHeight || 480 });
-  });
+async function loadBigChartData() {
+  const data = await fetchBinanceData(bigSym, bigInterval, 730); // Default to 2 years
+  if (data.length > 0) {
+    bigSeries.setData(data);
+    bigVolumeSeries.setData(data.map(d => ({
+      time: d.time, value: d.volume || Math.random() * 100,
+      color: d.close >= d.open ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)'
+    })));
+    bigCurrentPrice = data[data.length - 1].close;
+    
+    const hi = Math.max(...data.map(c => c.high));
+    const lo = Math.min(...data.map(c => c.low));
+    const highEl = document.getElementById('todayHigh');
+    const lowEl = document.getElementById('todayLow');
+    if (highEl) highEl.innerText = '$' + hi.toFixed(2);
+    if (lowEl) lowEl.innerText = '$' + lo.toFixed(2);
+    
+    bigChart.timeScale().fitContent();
+  }
 }
 
 async function loadBigChart(coinId, sym) {
   bigCoinId = coinId;
-  document.getElementById('bigCoinTitle').innerText = sym + ' / USD';
-  if (!bigChart) initBigChart();
+  bigSym = sym;
+  const titleEl = document.getElementById('bigCoinTitle');
+  if (titleEl) titleEl.innerText = sym + ' / USD';
 
-  try {
-    const data = await fetchOHLC(coinId, 1);
-    bigSeries.setData(data);
-    bigChart.timeScale().fitContent();
+  const el = document.getElementById('bigChartDiv');
+  const container = el.parentElement;
+  if (!el || !container) return;
+  
+  el.innerHTML = '';
+  
+  createToolbar(container, bigInterval, async (tf) => {
+    bigInterval = tf;
+    bigChart.applyOptions({
+      timeScale: { tickMarkFormatter: getCustomTimeFormatter(bigInterval) }
+    });
+    await loadBigChartData();
+  });
 
-    bigCurrentPrice = data[data.length - 1].close;
-    const hi = Math.max(...data.map(c => c.high));
-    const lo = Math.min(...data.map(c => c.low));
-    document.getElementById('todayHigh').innerText = '$' + hi.toFixed(2);
-    document.getElementById('todayLow').innerText  = '$' + lo.toFixed(2);
-    document.getElementById('ath').innerText = '—';
-    document.getElementById('atl').innerText = '—';
-  } catch (e) { console.warn('Big chart error:', e); }
+  bigChart = LightweightCharts.createChart(el, {
+    layout: { background: { type: 'solid', color: 'transparent' }, textColor: '#cbd5f5' },
+    grid: { vertLines: { color: 'rgba(255,255,255,0.05)' }, horzLines: { color: 'rgba(255,255,255,0.05)' } },
+    crosshair: { mode: LightweightCharts.CrosshairMode.Normal },
+    leftPriceScale: { visible: true, borderColor: 'rgba(255,255,255,0.1)' },
+    rightPriceScale: { visible: false },
+    timeScale: { 
+      visible: true,
+      borderColor: 'rgba(255,255,255,0.1)', 
+      timeVisible: true,
+      tickMarkFormatter: getCustomTimeFormatter(bigInterval)
+    }
+  });
+  
+  bigSeries = bigChart.addCandlestickSeries({
+    upColor: '#22c55e', downColor: '#dc2626', borderVisible: false,
+    wickUpColor: '#22c55e', wickDownColor: '#dc2626'
+  });
+
+  bigVolumeSeries = bigChart.addHistogramSeries({
+    priceFormat: { type: 'volume' },
+    priceScaleId: '',
+    scaleMargins: { top: 0.8, bottom: 0 }
+  });
+
+  new ResizeObserver(entries => {
+    if (entries.length === 0 || entries[0].target !== el) return;
+    const newRect = entries[0].contentRect;
+    bigChart.applyOptions({ width: newRect.width, height: newRect.height });
+  }).observe(el);
+  
+  await loadBigChartData();
+
+  if (bigUpdater) clearInterval(bigUpdater);
+  bigUpdater = setInterval(async () => {
+    if (bigChartModal && bigChartModal.classList.contains('active') && bigSym) {
+      const data = await fetchBinanceData(bigSym, bigInterval, 2);
+      if (data.length > 0 && bigSeries) {
+        const d = data[data.length - 1];
+        bigSeries.update(d);
+        bigVolumeSeries.update({
+          time: d.time, value: d.volume || Math.random() * 100,
+          color: d.close >= d.open ? 'rgba(34, 197, 94, 0.5)' : 'rgba(239, 68, 68, 0.5)'
+        });
+        bigCurrentPrice = d.close;
+      }
+    }
+  }, 5000);
 }
 
-/* auto-refresh big chart every 60 s while modal is open */
-setInterval(async () => {
-  if (bigChartModal.style.display !== 'block') return;
-  try {
-    const data = await fetchOHLC(bigCoinId, 1);
-    bigSeries.setData(data);
-    bigChart.timeScale().fitContent();
-    bigCurrentPrice = data[data.length - 1].close;
-  } catch {}
-}, 60000);
-
 /* ============================================================
-   OPEN / CLOSE MODAL
+   MODAL FUNCTIONS
    ============================================================ */
 function openMarketFromCoin(coinId, sym) {
-  bigChartModal.style.display = 'block';
-  if (!bigChart) initBigChart();
+  if (bigChartModal) {
+    bigChartModal.style.display = 'flex';
+    bigChartModal.classList.add('active');
+  }
   loadBigChart(coinId, sym);
 }
 
-function openMarketFromMain() {
-  openMarketFromCoin('bitcoin', 'BTC');
-}
-
 function closeBigChart() {
-  bigChartModal.style.display = 'none';
+  if (bigChartModal) {
+    bigChartModal.style.display = 'none';
+    bigChartModal.classList.remove('active');
+  }
 }
 
-document.getElementById('mainChartDiv').addEventListener('click', openMarketFromMain);
+// Add click on main chart to open Big Chart modal
+const mainChartDivEl = document.getElementById('mainChartDiv');
+if (mainChartDivEl) {
+  mainChartDivEl.addEventListener('dblclick', () => openMarketFromCoin('bitcoin', 'BTC'));
+}
 
 /* ============================================================
-   TRADE (BUY / SELL)
+   TRADE FUNCTIONS
    ============================================================ */
 function showTradePopup(type, price) {
   const box = document.createElement('div');
@@ -258,82 +422,132 @@ function showTradePopup(type, price) {
     border:1px solid ${isBuy ? 'rgba(34,197,94,.6)' : 'rgba(239,68,68,.6)'};
     color:${isBuy ? '#bbf7d0' : '#fecaca'};
     backdrop-filter:blur(14px);">
-    ${type} executed @ $${price}
+    ${type} executed @ $${price.toFixed(2)}
   </div>`;
   document.body.appendChild(box);
   setTimeout(() => box.remove(), 3000);
 }
 
 function trade(action) {
+  const qtyEl = document.getElementById('qtyInput');
+  const slEl = document.getElementById('slInput');
+  if (!qtyEl || !slEl) {
+    alert('Trade inputs not found');
+    return;
+  }
   const price = Number(bigCurrentPrice.toFixed(4));
   fetch('/api/trade', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      coin:     bigCoinId,
-      price:    price,
-      qty:      Number(document.getElementById('qtyInput').value),
-      stoploss: Number(document.getElementById('slInput').value),
-      action:   action
+      coin: bigSym,
+      price: price,
+      qty: Number(qtyEl.value) || 1,
+      stoploss: Number(slEl.value) || 0,
+      action: action
     })
   })
   .then(r => r.json())
   .then(d => {
-    if (d.error) alert(d.error);
-    else showTradePopup(action, price);
+    if (d.error) {
+      alert('Error: ' + d.error);
+    } else {
+      showTradePopup(action, price);
+      qtyEl.value = '1';
+      slEl.value = '';
+    }
   })
-  .catch(() => showTradePopup(action, price));
+  .catch(e => {
+    console.warn('[Trade] Error:', e);
+    showTradePopup(action, price);
+  });
 }
 
-buyBtn.addEventListener('click',  () => trade('BUY'));
-sellBtn.addEventListener('click', () => trade('SELL'));
+if (buyBtn) buyBtn.addEventListener('click', () => trade('BUY'));
+if (sellBtn) sellBtn.addEventListener('click', () => trade('SELL'));
 
 /* ============================================================
    SEARCH
    ============================================================ */
 function searchCrypto() {
-  const q      = document.getElementById('searchInput').value.trim().toUpperCase();
+  const searchEl = document.getElementById('searchInput');
+  if (!searchEl) return;
+  const q = searchEl.value.trim().toUpperCase();
   const coinId = SLUG[q];
   if (coinId) {
     openMarketFromCoin(coinId, q);
+    searchEl.value = '';
   } else {
     alert('Coin not found. Try: BTC, ETH, BNB, SOL, XRP, DOGE, ADA, TRX, MATIC, LTC, AVAX, LINK');
   }
 }
 
-document.getElementById('searchInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') searchCrypto();
-});
+const searchInput = document.getElementById('searchInput');
+if (searchInput) {
+  searchInput.addEventListener('keydown', e => {
+    if (e.key === 'Enter') searchCrypto();
+  });
+}
 
 function goMarket() {
-  document.getElementById('market').scrollIntoView({ behavior: 'smooth' });
+  const marketEl = document.getElementById('market');
+  if (marketEl) {
+    marketEl.scrollIntoView({ behavior: 'smooth' });
+  }
 }
 
 /* ============================================================
-   OPEN CHART FROM WALLET PAGE (?coin=BTC)
+   WEBSOCKET - LIVE PRICES (UI Table/Ticker updates)
    ============================================================ */
-window.addEventListener('load', () => {
-  const coin = new URLSearchParams(window.location.search).get('coin');
-  if (!coin) return;
-  const slug = SLUG[coin.toUpperCase()];
-  if (slug) setTimeout(() => openMarketFromCoin(slug, coin.toUpperCase()), 600);
-});
+try {
+  const socket = io();
+
+  socket.on('connect', () => {
+    console.log('[WebSocket] Connected');
+    const symbols = ['BTC', 'ETH', 'BNB', 'SOL', 'XRP', 'DOGE', 'ADA', 'TRX', 'MATIC', 'LTC', 'AVAX', 'LINK'];
+    symbols.forEach(sym => {
+      socket.emit('subscribe', { symbol: sym });
+    });
+  });
+
+  socket.on('price_tick', (data) => {
+    const { symbol, price, change_24h } = data;
+    const chg = change_24h || 0;
+    const cls = chg >= 0 ? 'chg-up' : 'chg-dn';
+    const sign = chg >= 0 ? '+' : '';
+    
+    ['tp-','tp2-'].forEach(p => {
+      const el = document.getElementById(p + symbol);
+      if (el) el.textContent = '₹' + price.toLocaleString('en-IN');
+    });
+    
+    ['tc-','tc2-'].forEach(p => {
+      const el = document.getElementById(p + symbol);
+      if (el) { 
+        el.textContent = sign + chg.toFixed(2) + '%'; 
+        el.className = 'chg ' + cls; 
+      }
+    });
+  });
+
+  socket.on('error', (err) => {
+    console.warn('[WebSocket] Error:', err);
+  });
+} catch (e) {
+  console.warn('[WebSocket] Setup error:', e);
+}
 
 /* ============================================================
-   LIVE PRICE SIDEBAR – refresh every 60 s from backend
+   INITIALIZATION
    ============================================================ */
-setInterval(() => {
-  fetch('/api/prices')
-    .then(r => r.json())
-    .then(data => {
-      for (const [sym, info] of Object.entries(data)) {
-        const el = document.getElementById('price-' + sym);
-        if (el && info.inr) {
-          const ch = info.change_24h || 0;
-          el.textContent = '₹' + info.inr.toLocaleString('en-IN') +
-            ' (' + (ch >= 0 ? '+' : '') + ch + '%)';
-          el.className = ch >= 0 ? 'up' : 'down';
-        }
-      }
-    }).catch(() => {});
-}, 60000);
+console.log('[App] Initializing charts...');
+
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', () => {
+    initMainChart();
+    initMiniCharts();
+  });
+} else {
+  initMainChart();
+  initMiniCharts();
+}

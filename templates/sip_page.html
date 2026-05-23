@@ -98,8 +98,8 @@ h1,h3{color:#facc15;font-weight:900}
       {% endfor %}
     </select>
 
-    <input type="number" id="amount" value="100" min="100">
-    <input type="number" id="months" value="1" min="1">
+    <input type="number" id="amount" value="100" min="10" step="10" placeholder="Amount (₹)">
+    <input type="number" id="months" value="1" min="1" placeholder="Months">
 
     <button type="button" id="startBtn" onclick="startSip()">Start SIP</button>
   </div>

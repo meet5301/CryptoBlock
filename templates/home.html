@@ -5,28 +5,22 @@
 <title>CryptoPlus – Live Crypto Platform</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="CryptoPlus – Real-time cryptocurrency charts, live prices, and trading platform.">
-
-<!-- Lightweight Charts (real candlestick charts) -->
-<script src="https://unpkg.com/lightweight-charts/dist/lightweight-charts.standalone.production.js"></script>
-
-<!-- External CSS -->
 <link rel="stylesheet" href="{{ url_for('static', filename='css/home.css') }}">
+<script src="https://unpkg.com/lightweight-charts@3.8.0/dist/lightweight-charts.standalone.production.js"></script>
 </head>
 
 <body>
 
 {% include "navbar.html" %}
 
-<!-- ===================== HERO ===================== -->
+<!-- HERO SECTION -->
 <section class="hero">
   <div class="hero-left">
     <h1>REVOLUTION<br><span>CRYPTO</span> PLATFORM</h1>
-
     <div class="hero-search">
       <input id="searchInput" placeholder="Search crypto (BTC, ETH, BNB, SOL…)">
       <button onclick="searchCrypto()">Search</button>
     </div>
-
     <div class="hero-actions">
       <button class="btn-yellow" onclick="goMarket()">Live Chart</button>
       <button class="btn-white" onclick="goMarket()">Explore</button>
@@ -34,31 +28,16 @@
   </div>
 </section>
 
-<!-- ===================== MARKET ===================== -->
+<!-- MARKET SECTION -->
 <section class="market" id="market">
-  <h2>CoinDesk 20</h2>
-
-  <div class="grid">
-    <!-- Main BTC real-time candlestick chart -->
-    <div class="chart-box" id="mainChartDiv"></div>
-
-    <!-- Sidebar live prices from backend -->
-    <div class="side">
-      {% for symbol, info in coins.items() %}
-      {% set p = prices.get(symbol, {}) %}
-      {% set ch = p.get('change_24h', 0) if p else 0 %}
-      <div class="coin">
-        <span>{{ symbol }}</span>
-        <span id="price-{{ symbol }}" class="{{ 'up' if ch >= 0 else 'down' }}">
-          ₹{{ "{:,.0f}".format(p.get('inr', 0)) if p else '—' }}
-          <small style="font-size:11px">({{ '+' if ch >= 0 else '' }}{{ ch }}%)</small>
-        </span>
-      </div>
-      {% endfor %}
-    </div>
+  <h2 id="mainChartTitle">Crypto Indexes Live Chart</h2>
+  
+  <!-- Main Chart -->
+  <div class="main-chart-container">
+    <div id="mainChartDiv" class="main-chart"></div>
   </div>
 
-  <!-- Market table -->
+  <!-- Market Table -->
   <div class="table-section">
     <table class="crypto-table">
       <thead>
@@ -73,133 +52,114 @@
   </div>
 </section>
 
-<!-- ===================== MINI CHARTS ===================== -->
+<!-- MINI CHARTS SECTION -->
 <section class="mini-market">
+  <h2 style="margin-bottom:30px;color:#facc15;font-size:28px;font-weight:900">Top Cryptocurrencies</h2>
   <div class="mini-grid">
-
     <div class="mini-card" onclick="openMarketFromCoin('bitcoin','BTC')">
       <span class="mini-title">BTC</span>
       <div class="mini-chart-div" data-coin="bitcoin" data-sym="BTC"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('ethereum','ETH')">
       <span class="mini-title">ETH</span>
       <div class="mini-chart-div" data-coin="ethereum" data-sym="ETH"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('binancecoin','BNB')">
       <span class="mini-title">BNB</span>
       <div class="mini-chart-div" data-coin="binancecoin" data-sym="BNB"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('solana','SOL')">
       <span class="mini-title">SOL</span>
       <div class="mini-chart-div" data-coin="solana" data-sym="SOL"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('ripple','XRP')">
       <span class="mini-title">XRP</span>
       <div class="mini-chart-div" data-coin="ripple" data-sym="XRP"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('dogecoin','DOGE')">
       <span class="mini-title">DOGE</span>
       <div class="mini-chart-div" data-coin="dogecoin" data-sym="DOGE"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('cardano','ADA')">
       <span class="mini-title">ADA</span>
       <div class="mini-chart-div" data-coin="cardano" data-sym="ADA"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('tron','TRX')">
       <span class="mini-title">TRX</span>
       <div class="mini-chart-div" data-coin="tron" data-sym="TRX"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('matic-network','MATIC')">
       <span class="mini-title">MATIC</span>
       <div class="mini-chart-div" data-coin="matic-network" data-sym="MATIC"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('litecoin','LTC')">
       <span class="mini-title">LTC</span>
       <div class="mini-chart-div" data-coin="litecoin" data-sym="LTC"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('avalanche-2','AVAX')">
       <span class="mini-title">AVAX</span>
       <div class="mini-chart-div" data-coin="avalanche-2" data-sym="AVAX"></div>
     </div>
-
     <div class="mini-card" onclick="openMarketFromCoin('chainlink','LINK')">
       <span class="mini-title">LINK</span>
       <div class="mini-chart-div" data-coin="chainlink" data-sym="LINK"></div>
     </div>
-
   </div>
 </section>
 
-<!-- ===================== BLOCKCHAIN STATS BAR ===================== -->
+<!-- BLOCKCHAIN STATS -->
 {% if bc_stats %}
-<section style="background:rgba(250,204,21,.06);border-top:1px solid rgba(250,204,21,.2);border-bottom:1px solid rgba(250,204,21,.2);">
-  <div style="display:grid;grid-template-columns:repeat(4,1fr);max-width:1200px;margin:auto;">
-    <div style="padding:22px;text-align:center;border-right:1px solid rgba(255,255,255,.08)">
-      <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">Total Blocks</div>
-      <div style="font-size:26px;font-weight:900;color:#facc15;margin-top:6px">{{ bc_stats.total_blocks }}</div>
+<section class="blockchain-stats">
+  <div class="stats-grid">
+    <div class="stat-box">
+      <div class="stat-label">Total Blocks</div>
+      <div class="stat-value">{{ bc_stats.total_blocks }}</div>
     </div>
-    <div style="padding:22px;text-align:center;border-right:1px solid rgba(255,255,255,.08)">
-      <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">Chain Valid?</div>
-      <div style="font-size:26px;font-weight:900;margin-top:6px;color:{{ '#22c55e' if bc_stats.chain_valid else '#ef4444' }}">{{ '✔ YES' if bc_stats.chain_valid else '✘ NO' }}</div>
+    <div class="stat-box">
+      <div class="stat-label">Chain Valid?</div>
+      <div class="stat-value" style="color:{{ '#22c55e' if bc_stats.chain_valid else '#ef4444' }}">{{ '✔ YES' if bc_stats.chain_valid else '✘ NO' }}</div>
     </div>
-    <div style="padding:22px;text-align:center;border-right:1px solid rgba(255,255,255,.08)">
-      <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">Pending Txns</div>
-      <div style="font-size:26px;font-weight:900;color:#facc15;margin-top:6px">{{ bc_stats.pending_count }}</div>
+    <div class="stat-box">
+      <div class="stat-label">Pending Txns</div>
+      <div class="stat-value">{{ bc_stats.pending_count }}</div>
     </div>
-    <div style="padding:22px;text-align:center">
-      <div style="font-size:12px;color:#94a3b8;text-transform:uppercase;letter-spacing:.5px">Avg Risk Score</div>
-      <div style="font-size:26px;font-weight:900;color:#f59e0b;margin-top:6px">{{ bc_stats.avg_risk }}</div>
+    <div class="stat-box">
+      <div class="stat-label">Avg Risk Score</div>
+      <div class="stat-value">{{ bc_stats.avg_risk }}</div>
     </div>
   </div>
 </section>
 {% endif %}
 
-<!-- ===================== BIG CHART MODAL ===================== -->
+<!-- TRADING MODAL -->
 <div id="bigChartModal" class="big-chart-modal">
-
   <span class="close-btn" onclick="closeBigChart()">×</span>
-
   <div class="big-chart-layout">
-
-    <!-- Real candlestick chart -->
     <div class="big-chart-box">
       <h2 id="bigCoinTitle">BTC / USD</h2>
-      <div id="bigChartDiv"></div>
+      <div id="bigChartDiv" class="big-chart"></div>
     </div>
-
-    <!-- Trade panel -->
     <div class="trade-panel">
       <div class="trade-inputs">
-        <input id="qtyInput"   type="number" value="1" min="1"  placeholder="Quantity">
-        <input id="buyAtPrice" type="number"            placeholder="Buy at price (optional)">
-        <input id="slInput"    type="number"            placeholder="Stop Loss price">
+        <input id="qtyInput" type="number" value="0.001" min="0.0001" step="0.0001" placeholder="Quantity (e.g., 0.001)">
+        <input id="buyAtPrice" type="number" placeholder="Buy at price (optional)">
+        <input id="slInput" type="number" placeholder="Stop Loss price">
       </div>
-
-      <button class="buy"  id="buyBtn">Buy</button>
-      <button class="sell" id="sellBtn">Sell</button>
-
+      <div class="trade-buttons" style="display: flex; gap: 15px; margin-bottom: 20px;">
+        <button class="buy" id="buyBtn" style="margin-bottom: 0;">Buy</button>
+        <button class="sell" id="sellBtn">Sell</button>
+      </div>
       <div class="stats">
-        <div>Today High: <span id="todayHigh"></span></div>
-        <div>Today Low:  <span id="todayLow"></span></div>
-        <div>ATH: <span id="ath"></span></div>
-        <div>ATL: <span id="atl"></span></div>
+        <div>Today High: <span id="todayHigh">-</span></div>
+        <div>Today Low: <span id="todayLow">-</span></div>
+        <div>ATH: <span id="ath">-</span></div>
+        <div>ATL: <span id="atl">-</span></div>
       </div>
     </div>
-
   </div>
 </div>
 
-<!-- External JS (real live charts) -->
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script src="{{ url_for('static', filename='js/home.js') }}"></script>
 
 </body>

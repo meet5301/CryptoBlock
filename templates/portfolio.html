@@ -199,6 +199,11 @@ body{
 </section>
 
 <script>
+// Auto-refresh portfolio every 10 seconds for live P&L
+setInterval(() => {
+  location.reload();
+}, 10000);
+
 function sellTrade(coin){
   fetch("/api/trade",{
     method:"POST",

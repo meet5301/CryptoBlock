@@ -5,7 +5,7 @@ from database.mongo import get_db
 
 auth_bp = Blueprint("auth", __name__)
 
-COINS = ["ALP", "VEC", "ORB", "NVA", "PLS", "ZYN", "QNT", "FLX", "CRX", "AXN", "LUM", "PRM"]
+COINS = ["BTC", "ETH", "BNB", "SOL", "XRP", "DOGE", "ADA", "TRX", "MATIC", "LTC", "AVAX", "LINK"]
 
 
 def _create_wallet():
