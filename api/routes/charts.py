@@ -7,10 +7,6 @@ from flask import Blueprint, jsonify, request
 from core.indicator_engine import IndicatorEngine
 from price_engine import get_price, COINGECKO_IDS
 
-charts_bp = Blueprint("charts", __name__)
-
-USD_TO_INR = 83.5
-
 INTERVAL_TTL = {"15m": 60, "1h": 60, "4h": 300, "1d": 300, "1w": 3600}
 INTERVAL_DAYS = {"15m": 2, "1h": 2, "4h": 7, "1d": 30, "1w": 365}
 
@@ -72,8 +68,8 @@ def _fetch_ohlc(symbol: str, interval: str) -> list:
             candles = []
             for i in range(1, len(prices)):
                 t = prices[i][0]
-                o = round(prices[i - 1][1] * USD_TO_INR, 2)
-                c = round(prices[i][1] * USD_TO_INR, 2)
+                o = round(prices[i - 1][1], 2)
+                c = round(prices[i][1], 2)
                 h = round(max(o, c) * 1.002, 2)
                 l = round(min(o, c) * 0.998, 2)
                 candles.append({"t": t, "o": o, "h": h, "l": l, "c": c})
@@ -99,10 +95,10 @@ def _fetch_ohlc(symbol: str, interval: str) -> list:
                 continue
             candles.append({
                 "t": row[0],
-                "o": round(row[1] * USD_TO_INR, 2),
-                "h": round(row[2] * USD_TO_INR, 2),
-                "l": round(row[3] * USD_TO_INR, 2),
-                "c": round(row[4] * USD_TO_INR, 2),
+                "o": round(row[1], 2),
+                "h": round(row[2], 2),
+                "l": round(row[3], 2),
+                "c": round(row[4], 2),
             })
         return candles
     except Exception as e:

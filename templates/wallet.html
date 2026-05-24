@@ -130,7 +130,7 @@ body{
 
       <div class="wallet-row">
         <span>Cash Balance</span>
-        <span class="wallet-cash">₹ {{ wallet.cash }}</span>
+        <span class="wallet-cash">$ {{ wallet.cash }}</span>
       </div>
 
       <div class="section-title">Running Trades</div>
@@ -198,7 +198,7 @@ function showDetails(coin, qty, price, date){
 
   document.getElementById("dCoin").innerText = coin + " Details";
   document.getElementById("dQty").innerText = qty;
-  document.getElementById("dPrice").innerText = "₹ " + price;
+  document.getElementById("dPrice").innerText = "$ " + price;
   document.getElementById("dDate").innerText = date;
 }
 </script>

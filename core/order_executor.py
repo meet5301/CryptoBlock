@@ -27,7 +27,7 @@ class OrderExecutor:
 
     def _process(self, db, price_engine, record_tx, notify):
         all_prices = price_engine.get_all_prices()
-        prices = {k: v.get("inr", 0) if isinstance(v, dict) else v
+        prices = {k: v.get("usd", 0) if isinstance(v, dict) else v
                   for k, v in all_prices.items()}
         pending = list(db.orders.find({"status": "PENDING"}))
 
@@ -96,7 +96,7 @@ class OrderExecutor:
         record_tx(sender_addr, "MARKET", cost, coin, "TRADE")
 
         notify(db, email,
-               f"{order['type']} {action} order executed: {qty} {coin} @ ₹{price:.2f}",
+               f"{order['type']} {action} order executed: {qty} {coin} @ ${price:.2f}",
                "TRADE")
 
 

@@ -7,7 +7,7 @@
 
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
+html{scroll-behavior:smooth;padding-top:32px}
 
 body{
   font-family:"Segoe UI",Inter,system-ui;
@@ -95,11 +95,11 @@ body{
 <div class="portfolio-summary">
   <div class="summary-card profit">
     <span>Total Profit</span>
-    <h3>₹ {{ total_profit }}</h3>
+    <h3>$ {{ total_profit }}</h3>
   </div>
   <div class="summary-card loss">
     <span>Total Loss</span>
-    <h3>₹ {{ total_loss }}</h3>
+    <h3>$ {{ total_loss }}</h3>
   </div>
 </div>
 
@@ -125,10 +125,10 @@ body{
   <tr>
     <td>{{ r.coin }}</td>
     <td>{{ r.qty }}</td>
-    <td>₹{{ "{:,.2f}".format(r.buy_price) }}</td>
-    <td>₹{{ "{:,.2f}".format(r.live_price) }}</td>
+    <td>${{ "{:,.2f}".format(r.buy_price) }}</td>
+    <td>${{ "{:,.2f}".format(r.live_price) }}</td>
     <td class="{{ 'up' if r.pnl >= 0 else 'down' }}">
-      ₹ {{ r.pnl }}
+      $ {{ r.pnl }}
     </td>
     <td>
       <button class="sell-btn"
@@ -177,9 +177,9 @@ body{
     </td>
     <td>
       {% if h.amount >= 0 %}
-        <span class="up">+₹{{ h.amount }}</span>
+        <span class="up">+${{ h.amount }}</span>
       {% else %}
-        <span class="down">₹{{ h.amount }}</span>
+        <span class="down">${{ h.amount }}</span>
       {% endif %}
     </td>
     <td>{{ h.created_at.strftime("%d %b %Y %H:%M") }}</td>

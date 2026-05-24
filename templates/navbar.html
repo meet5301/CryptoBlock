@@ -101,7 +101,7 @@
     {% for c in coins %}
     <div class="ticker-item" id="tick-{{ c }}">
       <span class="sym">{{ c }}</span>
-      <span class="prc" id="tp-{{ c }}">₹—</span>
+      <span class="prc" id="tp-{{ c }}">$—</span>
       <span class="chg" id="tc-{{ c }}"></span>
     </div>
     {% endfor %}
@@ -109,7 +109,7 @@
     {% for c in coins %}
     <div class="ticker-item">
       <span class="sym">{{ c }}</span>
-      <span class="prc" id="tp2-{{ c }}">₹—</span>
+      <span class="prc" id="tp2-{{ c }}">$—</span>
       <span class="chg" id="tc2-{{ c }}"></span>
     </div>
     {% endfor %}
@@ -173,7 +173,7 @@ function updateTicker(data) {
     const sign = chg >= 0 ? '+' : '';
     ['tp-','tp2-'].forEach(p => {
       const el = document.getElementById(p + coin);
-      if (el) el.textContent = '₹' + price;
+      if (el) el.textContent = '$' + price;
     });
     ['tc-','tc2-'].forEach(p => {
       const el = document.getElementById(p + coin);

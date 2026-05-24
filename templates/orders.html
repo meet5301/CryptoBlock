@@ -77,7 +77,7 @@ select option{background:#0a1f44}
     <!-- PLACE ORDER FORM -->
     <div class="box">
       <h3>Place New Order</h3>
-      <div class="cash-badge">Cash: ₹{{ wallet.cash | round(2) }}</div>
+      <div class="cash-badge">Cash: ${{ wallet.cash | round(2) }}</div>
 
       <label>Coin</label>
       <select id="oCoin">
@@ -103,7 +103,7 @@ select option{background:#0a1f44}
       <input type="number" id="oQty" value="1" min="1">
 
       <div id="targetRow">
-        <label>Target Price (₹)</label>
+        <label>Target Price ($)</label>
         <input type="number" id="oTarget" placeholder="e.g. 3200">
       </div>
 
@@ -126,7 +126,7 @@ select option{background:#0a1f44}
               <td><span class="badge badge-pending">{{ o.type }}</span></td>
               <td><span class="badge {{ 'badge-buy' if o.action=='BUY' else 'badge-sell' }}">{{ o.action }}</span></td>
               <td>{{ o.qty }}</td>
-              <td>₹{{ o.target_price }}</td>
+              <td>${{ o.target_price }}</td>
               <td><span class="badge badge-pending">PENDING</span></td>
               <td><button class="cancel-btn" onclick="cancelOrder('{{ o._id }}')">Cancel</button></td>
             </tr>
@@ -158,7 +158,7 @@ select option{background:#0a1f44}
                   {{ o.status }}
                 </span>
               </td>
-              <td>{{ '₹' + o.executed_price|string if o.get('executed_price') else '—' }}</td>
+              <td>{{ '$' + o.executed_price|string if o.get('executed_price') else '—' }}</td>
             </tr>
             {% endfor %}
           </tbody>
@@ -207,7 +207,8 @@ function placeOrder() {
   .then(r => r.json())
   .then(d => {
     if (d.error) { showToast(d.error, false); return; }
-    showToast(d.message || `Order placed @ ₹${d.executed_price || ''}`);
+    showToast(d.message || `Order placed @ $${d.executed_price || ''}`);
+
     if (type === 'MARKET') setTimeout(() => location.reload(), 1500);
   });
 }

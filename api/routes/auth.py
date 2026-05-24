@@ -10,7 +10,7 @@ COINS = ["BTC", "ETH", "BNB", "SOL", "XRP", "DOGE", "ADA", "TRX", "MATIC", "LTC"
 
 def _create_wallet():
     return {
-        "cash": 100000,
+        "cash": 10000,
         "coins": {c: 0 for c in COINS},
         "avg_price": {},
         "wallet_address": "0x" + secrets.token_hex(20),

@@ -16,8 +16,6 @@ _FALLBACK_USD = {
     "MATIC": 0.55, "LTC": 85, "AVAX": 28, "LINK": 13
 }
 
-USD_TO_INR = 83.5
-
 _cache = {}
 _history = {s: deque(maxlen=30) for s in COINGECKO_IDS}
 _socketio = None  # injected by app.py after SocketIO init
@@ -30,9 +28,8 @@ def set_socketio(sio):
 
 def _init_fallback():
     for symbol, usd in _FALLBACK_USD.items():
-        inr = round(usd * USD_TO_INR, 2)
-        _cache[symbol] = {"inr": inr, "change_24h": 0.0}
-        _history[symbol].append(inr)
+        _cache[symbol] = {"usd": usd, "change_24h": 0.0}
+        _history[symbol].append(usd)
 
 
 def fetch_prices():
@@ -53,10 +50,9 @@ def fetch_prices():
         for symbol, cg_id in COINGECKO_IDS.items():
             if cg_id in data and "usd" in data[cg_id]:
                 usd_price = data[cg_id]["usd"]
-                inr_price = round(usd_price * USD_TO_INR, 2)
                 change = round(data[cg_id].get("usd_24h_change", 0.0), 2)
-                _cache[symbol] = {"inr": inr_price, "change_24h": change}
-                _history[symbol].append(inr_price)
+                _cache[symbol] = {"usd": round(usd_price, 2), "change_24h": change}
+                _history[symbol].append(usd_price)
                 updated += 1
 
                 # Emit SocketIO price_tick if socketio is available
@@ -64,7 +60,7 @@ def fetch_prices():
                     try:
                         _socketio.emit("price_tick", {
                             "symbol": symbol,
-                            "price": inr_price,
+                            "price": round(usd_price, 2),
                             "change_24h": change,
                             "timestamp": ts,
                         }, room=symbol)
@@ -78,7 +74,7 @@ def fetch_prices():
 
 
 def get_price(symbol):
-    return _cache.get(symbol, {}).get("inr", 0)
+    return _cache.get(symbol, {}).get("usd", 0)
 
 
 def get_all_prices():
@@ -99,8 +95,18 @@ def _updater():
         fetch_prices()
 
 
-def start():
+# Initialize fallback prices on module import
+try:
     _init_fallback()
-    fetch_prices()
+except Exception as e:
+    print(f"[PriceEngine] Fallback init error: {e}")
+
+
+def start():
+    """Start the price engine background fetcher"""
+    try:
+        fetch_prices()
+    except Exception:
+        pass
     threading.Thread(target=_updater, daemon=True).start()
     print("[PriceEngine] Started — real CoinGecko prices active")

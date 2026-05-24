@@ -195,7 +195,7 @@ body{
   <div class="wallet">
     <div>
       <h3>Cash Balance</h3>
-      <p>₹{{ wallet.cash }}</p>
+      <p>${{ wallet.cash }}</p>
     </div>
     <div>
       <h3>Status</h3>
@@ -218,7 +218,7 @@ body{
           <div class="tx-left">To {{ t.receiver }}</div>
           <div class="tx-time">{{ t.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
         </div>
-        <div class="tx-minus">− ₹{{ t.amount }}</div>
+        <div class="tx-minus">− ${{ t.amount }}</div>
       </div>
     {% else %}
       <p style="color:#64748b">No sent transactions</p>
@@ -231,7 +231,7 @@ body{
           <div class="tx-left">From {{ t.sender }}</div>
           <div class="tx-time">{{ t.created_at.strftime('%d %b %Y, %I:%M %p') }}</div>
         </div>
-        <div class="tx-plus">+ ₹{{ t.amount }}</div>
+        <div class="tx-plus">+ ${{ t.amount }}</div>
       </div>
     {% else %}
       <p style="color:#64748b">No received transactions</p>
@@ -247,7 +247,7 @@ body{
         <input type="email" name="receiver" required>
       </div>
       <div class="send-field">
-        <label>Amount (₹)</label>
+        <label>Amount ($)</label>
         <input type="number" name="rupees" min="1" required>
       </div>
       <button class="send-btn">Send Money</button>

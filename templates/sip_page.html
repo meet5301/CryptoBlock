@@ -98,7 +98,7 @@ h1,h3{color:#facc15;font-weight:900}
       {% endfor %}
     </select>
 
-    <input type="number" id="amount" value="100" min="10" step="10" placeholder="Amount (₹)">
+    <input type="number" id="amount" value="100" min="10" step="10" placeholder="Amount ($)">
     <input type="number" id="months" value="1" min="1" placeholder="Months">
 
     <button type="button" id="startBtn" onclick="startSip()">Start SIP</button>
@@ -109,7 +109,7 @@ h1,h3{color:#facc15;font-weight:900}
 <div class="card">
 <h3>Wallet Balance</h3>
 <div class="info-box">
-  <span id="walletCash">₹ {{ wallet.cash }}</span>
+  <span id="walletCash">$ {{ wallet.cash }}</span>
 </div>
 
 <h3>Active SIP</h3>
@@ -118,7 +118,7 @@ h1,h3{color:#facc15;font-weight:900}
 {% for s in sip_list %}
   {% if s.status == "ACTIVE" %}
   <div class="sip-row" id="sip-{{ s._id }}">
-    <span>{{ s.coin }} — ₹{{ s.amount }}/month</span>
+    <span>{{ s.coin }} — ${{ s.amount }}/month</span>
     <button class="delete-btn" onclick="askCloseSip('{{ s._id }}')">Close</button>
   </div>
   {% endif %}
@@ -182,7 +182,7 @@ function refreshWallet(){
   fetch("/api/wallet")
     .then(r=>r.json())
     .then(d=>{
-      walletCash.innerText = "₹ " + d.cash;
+      walletCash.innerText = "$ " + d.cash;
     });
 }
 
@@ -215,7 +215,7 @@ function startSip(){
     row.className = "sip-row";
     row.id = "sip-"+d.id;
     row.innerHTML = `
-      <span>${d.coin} — ₹${d.amount}/month</span>
+      <span>${d.coin} — $${d.amount}/month</span>
       <button class="delete-btn" onclick="askCloseSip('${d.id}')">Close</button>
     `;
     sipList.prepend(row);

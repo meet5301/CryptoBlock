@@ -15,7 +15,6 @@ const SLUG = {
   LTC: 'litecoin', AVAX: 'avalanche-2', LINK: 'chainlink'
 };
 
-// Fetch real OHLC data from Binance API
 async function fetchBinanceData(symbol, interval = '15m', limit = 500) {
   let sym = symbol.toUpperCase();
   if (sym === 'MATIC') sym = 'POL'; // Binance renamed MATIC to POL
@@ -24,14 +23,13 @@ async function fetchBinanceData(symbol, interval = '15m', limit = 500) {
     const response = await fetch(url);
     if (!response.ok) return [];
     const data = await response.json();
-    const INR_RATE = 83.5;
     return data.map(d => ({
       time: (d[0] / 1000) + (new Date().getTimezoneOffset() * -60), // Adjust to local timezone for lightweight-charts
-      open: parseFloat(d[1]) * INR_RATE,
-      high: parseFloat(d[2]) * INR_RATE,
-      low: parseFloat(d[3]) * INR_RATE,
-      close: parseFloat(d[4]) * INR_RATE,
-      value: parseFloat(d[4]) * INR_RATE // for line charts
+      open: parseFloat(d[1]),
+      high: parseFloat(d[2]),
+      low: parseFloat(d[3]),
+      close: parseFloat(d[4]),
+      value: parseFloat(d[4]) // for line charts
     }));
   } catch (e) {
     console.warn('[API] Binance fetch failed for', sym, e);
@@ -518,7 +516,7 @@ try {
     
     ['tp-','tp2-'].forEach(p => {
       const el = document.getElementById(p + symbol);
-      if (el) el.textContent = '₹' + price.toLocaleString('en-IN');
+      if (el) el.textContent = '$' + price.toLocaleString('en-US');
     });
     
     ['tc-','tc2-'].forEach(p => {

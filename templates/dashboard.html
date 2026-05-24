@@ -5,16 +5,36 @@
 <title>CryptoFusion | Dashboard</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
-// Auto-refresh dashboard every 10 seconds for live P&L
-setInterval(() => {
-  location.reload();
-}, 10000);
+// Live P&L updates without full page reload
+document.addEventListener('DOMContentLoaded', () => {
+  try {
+    const socket = io();
+    socket.on('connect', () => {
+      const symbols = ['BTC','ETH','BNB','SOL','XRP','DOGE','ADA','TRX','MATIC','LTC','AVAX','LINK'];
+      symbols.forEach(sym => socket.emit('subscribe', { symbol: sym }));
+    });
+    socket.on('price_tick', () => {
+      // Refresh only cash display every 5 seconds instead of full page reload
+      fetch('/api/wallet').then(r => r.json()).then(d => {
+        const el = document.getElementById('totalVal');
+        if (el && d.cash !== undefined) {
+          el.textContent = '$' + parseFloat(d.cash).toLocaleString('en-US', {maximumFractionDigits: 2});
+        }
+      }).catch(e => console.error('[Dashboard] Update error:', e));
+    });
+  } catch (e) {
+    console.warn('[Dashboard] WebSocket setup error:', e);
+  }
+});
+// Fallback: refresh every 15 seconds if WebSocket fails
+setTimeout(() => { location.reload(); }, 15000);
 </script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 body{
-  font-family:"Segoe UI",Inter,system-ui;color:white;padding-top:80px;
+  font-family:"Segoe UI",Inter,system-ui;color:white;padding-top:120px;
   background:linear-gradient(rgba(255,255,255,0.05) 1px,transparent 1px),
     linear-gradient(90deg,rgba(255,255,255,0.05) 1px,transparent 1px),#0a1f44;
   background-size:42px 42px;animation:gridMove 20s linear infinite;
@@ -85,13 +105,13 @@ h1{font-size:28px;font-weight:900;color:#facc15;margin-bottom:24px}
   <div class="stat-row">
     <div class="stat-card">
       <div class="lbl">Total Portfolio</div>
-      <div class="val" id="totalVal">₹{{ total_value }}</div>
+      <div class="val" id="totalVal">${{ total_value }}</div>
       <div class="sub">Cash + Holdings</div>
     </div>
     <div class="stat-card">
       <div class="lbl">Today's PnL</div>
       <div class="val {{ 'green' if day_pnl >= 0 else 'red' }}">
-        {{ '+' if day_pnl >= 0 else '' }}₹{{ day_pnl }}
+        {{ '+' if day_pnl >= 0 else '' }}${{ day_pnl }}
       </div>
       <div class="sub">Realized trades</div>
     </div>
@@ -137,11 +157,11 @@ h1{font-size:28px;font-weight:900;color:#facc15;margin-bottom:24px}
           <tr>
             <td style="font-weight:800;color:#facc15">{{ c.coin }}</td>
             <td>{{ c.qty }}</td>
-            <td>₹{{ c.avg_price }}</td>
-            <td>₹{{ c.current_price }}</td>
-            <td>₹{{ c.value }}</td>
+            <td>${{ c.avg_price }}</td>
+            <td>${{ c.current_price }}</td>
+            <td>${{ c.value }}</td>
             <td class="{{ 'up' if c.unrealized_pnl >= 0 else 'down' }}">
-              {{ '+' if c.unrealized_pnl >= 0 else '' }}₹{{ c.unrealized_pnl }}
+              {{ '+' if c.unrealized_pnl >= 0 else '' }}${{ c.unrealized_pnl }}
             </td>
             <td class="{{ 'up' if c.pnl_pct >= 0 else 'down' }}">
               {{ '+' if c.pnl_pct >= 0 else '' }}{{ c.pnl_pct }}%
@@ -176,7 +196,7 @@ h1{font-size:28px;font-weight:900;color:#facc15;margin-bottom:24px}
             </span>
           </td>
           <td>{{ t.qty }}</td>
-          <td>₹{{ t.buy_price }}</td>
+          <td>${{ t.buy_price }}</td>
           <td class="mono">{{ t.created_at }}</td>
         </tr>
         {% endfor %}
@@ -244,7 +264,7 @@ function animateCounter(el, target) {
   const timer = setInterval(() => {
     start += step;
     if (start >= target) { start = target; clearInterval(timer); }
-    el.textContent = '₹' + Math.floor(start).toLocaleString('en-IN');
+    el.textContent = '$' + Math.floor(start).toLocaleString('en-US');
   }, 16);
 }
 const tv = document.getElementById('totalVal');
